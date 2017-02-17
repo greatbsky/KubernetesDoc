@@ -1,0 +1,1051 @@
+<h1 style="text-align:center"><strong>Installation of kubernetes v1.5.2 step by step</strong></h1>
+
+<h3><span style="font-size:18px"><a href="https://kubernetes.io/docs/whatisk8s">Kubernetes</a>&nbsp;is an open-source system for automating deployment, scaling, and management of containerized applications.</span></h3>
+
+<p><span style="font-size:18px">It groups containers that make up an application into logical units for easy management and discovery. Kubernetes builds upon&nbsp;<a href="http://queue.acm.org/detail.cfm?id=2898444">15 years of experience of running production workloads at Google</a>, combined with best-of-breed ideas and practices from the community.</span></p>
+
+<p><span style="font-size:18px">Recently there is a new project&nbsp;need to deploy, compared&nbsp;openstack, for the lack of hardware&nbsp;resources, I choose container for better performance, and I need to deploy, manage it&nbsp;easier, so I decide to set up a kubernetes cluster.</span></p>
+
+<p><span style="font-size:18px">This public doc is my note in develop environment, not production environment. I have ever redone&nbsp;some times so maybe there are some&nbsp;mistake.</span></p>
+
+<p>&nbsp;</p>
+
+<p><span style="font-size:18px"><strong>All Phsical Node:</strong></span></p>
+
+<p><span style="font-size:18px">kubemaster&nbsp;&nbsp; &nbsp;192.168.1.158<br />
+kubenode0&nbsp;&nbsp; &nbsp;192.168.1.116<br />
+kubenode1&nbsp;&nbsp; &nbsp;192.168.1.173</span></p>
+
+<p>&nbsp;</p>
+
+<p><span style="font-size:18px"><strong>Step 1 config the initialize environment on all&nbsp;host.</strong></span></p>
+
+<p><span style="font-size:18px">[root@all ~]# cat &lt;&lt;EOF &gt;&gt; /etc/hosts</span><br />
+<span style="font-size:14px">192.168.1.158 kubemaster<br />
+192.168.1.116 kubenode0<br />
+192.168.1.173 kubenode1<br />
+61.91.161.217 google.com<br />
+61.91.161.217 gcr.io &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;#just for the users behind GFW, otherwise you need download the google-containers by yourself.<br />
+61.91.161.217 www.gcr.io<br />
+61.91.161.217 console.cloud.google.com<br />
+61.91.161.217 storage.googleapis.com<br />
+EOF</span><br />
+<span style="font-size:18px">[root@all ~]# vi /etc/selinux/config</span><br />
+<span style="font-size:14px">SELINUX=permissive</span><br />
+<span style="font-size:18px">[root@all ~]# setenforce 0<br />
+[root@all ~]# getenforce</span><br />
+<span style="font-size:14px">Permissive</span><br />
+<span style="font-size:18px">[root@all ~]# systemctl stop firewalld<br />
+[root@all ~]# systemctl disable firewalld</span><br />
+&nbsp;</p>
+
+<p>&nbsp;</p>
+
+<p><span style="font-size:18px"><strong>Step 2&nbsp;remove docker.</strong></span></p>
+
+<p><span style="font-size:18px">Docker will be installed with kubernetes, avoid confliction so you need to remove docker.</span></p>
+
+<p><span style="font-size:18px">[root@all ~]#&nbsp;yum list installed | grep docker</span></p>
+
+<p><span style="font-size:18px">[root@all ~]#&nbsp;yum remove -y docker-engine.x86_64 docker-engine-selinux.noarch</span></p>
+
+<p>&nbsp;</p>
+
+<p>&nbsp;</p>
+
+<p><span style="font-size:18px"><strong>Step 3&nbsp;begin to install kubernetes.</strong></span></p>
+
+<p><span style="font-size:18px">You can try two methods.</span></p>
+
+<p><span style="font-size:18px"><strong>Method 1(very slowly for me)</strong></span></p>
+
+<p><span style="font-size:18px">[root@all ~]# cat &lt;&lt;EOF &gt; /etc/yum.repos.d/virt7-docker-common-candidate.repo &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; #you may saw that it&#39;s different from offical document(virt7-docker-common-release), for I need the latest version.</span><br />
+<span style="font-size:14px">[virt7-docker-common-candidate]<br />
+name=virt7-docker-common-candidate<br />
+baseurl=https://cbs.centos.org/repos/virt7-docker-common-candidate/x86_64/os/<br />
+enabled=1<br />
+gpgcheck=0<br />
+EOF</span></p>
+
+<p><span style="font-size:18px">[root@all ~]# yum -y install kubernetes etcd flannel</span></p>
+
+<p>&nbsp;</p>
+
+<p><strong><span style="font-size:18px">Method 2(I choose this)</span></strong></p>
+
+<p><span style="font-size:18px">First you need to download all packages from&nbsp;https://cbs.centos.org/repos/virt7-docker-common-candidate/x86_64/os/Packages/ , then:</span></p>
+
+<p><span style="font-size:18px">[root@all ~]# rm -rf /etc/yum.repos.d/virt7-docker-common-candidate.repo<br />
+[root@all ~]# yum install -y createrepo<br />
+[root@all ~]# cd /data/softs/<br />
+[root@all softs]# mkdir localyum<br />
+[root@all softs]# ll /data/softs/localyum</span><br />
+total 228528<br />
+-rw-r--r--. 1 root root &nbsp; 563688 Feb 13 17:50 atomic-1.8-5.gitcc5997a.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;64584 Feb 13 17:44 atomicapp-0.1.11-1.el7.noarch.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp; 2856 Feb 13 17:44 centos-release-docker-1-2.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;24012 Feb 13 17:44 container-selinux-2.2-3.el7.noarch.rpm<br />
+-rw-r--r--. 1 root root 25600000 Feb 13 19:04 docker-1.12.6-14.gitf499e8b.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;70700 Feb 13 17:44 docker-common-1.12.6-14.gitf499e8b.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp;2942740 Feb 13 17:53 docker-distribution-2.3.0-2.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;74904 Feb 13 17:44 docker-fish-completion-1.12.6-14.gitf499e8b.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root 27053040 Feb 13 19:02 docker-latest-1.13-27.git6cd0bbe.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;70640 Feb 13 17:45 docker-latest-fish-completion-1.13-27.git6cd0bbe.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;65652 Feb 13 17:45 docker-latest-logrotate-1.13-27.git6cd0bbe.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;64928 Feb 13 17:44 docker-latest-rhsubscription-1.13-27.git6cd0bbe.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;65856 Feb 13 17:47 docker-latest-vim-1.13-27.git6cd0bbe.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;80832 Feb 13 17:44 docker-latest-zsh-completion-1.13-27.git6cd0bbe.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;69948 Feb 13 17:45 docker-logrotate-1.12.6-14.gitf499e8b.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp;2289868 Feb 13 17:52 docker-lvm-plugin-1.12.6-14.gitf499e8b.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp;2020712 Feb 13 17:49 docker-novolume-plugin-1.12.6-14.gitf499e8b.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp;2111384 Feb 13 17:49 docker-rhel-push-plugin-1.12.6-14.gitf499e8b.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;69252 Feb 13 17:45 docker-rhsubscription-1.12.6-14.gitf499e8b.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp;3112932 Feb 13 17:52 docker-v1.10-migrator-1.12.6-14.gitf499e8b.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;70180 Feb 13 17:45 docker-vim-1.12.6-14.gitf499e8b.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;83640 Feb 13 17:44 docker-zsh-completion-1.12.6-14.gitf499e8b.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp;1765592 Feb 13 17:50 flannel-0.5.1-2.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; 592008 Feb 13 17:46 go-bindata-3.0.7-8.gita0ff256.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp; 3108 Feb 13 17:44 go-compilers-golang-compiler-1-3.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp;1887304 Feb 13 17:50 godep-27-3.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp;1209580 Feb 13 17:48 golang-1.7.4-1.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root 45834632 Feb 13 20:11 golang-bin-1.7.4-1.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp;2439656 Feb 13 17:51 golang-docs-1.7.4-1.el7.noarch.rpm<br />
+-rw-r--r--. 1 root root &nbsp; 685652 Feb 13 17:46 golang-github-cpuguy83-go-md2man-1.0.4-2.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;70808 Feb 13 17:45 golang-github-russross-blackfriday-devel-1.2-7.el7.noarch.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp; 5540 Feb 13 17:44 golang-github-shurcooL-sanitized_anchor_name-devel-0-0.3.git8e87604.el7.noarch.rpm<br />
+-rw-r--r--. 1 root root &nbsp; 217324 Feb 13 17:46 golang-golangorg-crypto-devel-0-0.13.gitc10c31b.el7.noarch.rpm<br />
+-rw-r--r--. 1 root root &nbsp; 217976 Feb 13 17:46 golang-googlecode-go-crypto-devel-0-0.13.gitc10c31b.el7.noarch.rpm<br />
+-rw-r--r--. 1 root root &nbsp; 545684 Feb 13 17:46 golang-misc-1.7.4-1.el7.noarch.rpm<br />
+-rw-r--r--. 1 root root &nbsp;4565052 Feb 13 18:03 golang-src-1.7.4-1.el7.noarch.rpm<br />
+-rw-r--r--. 1 root root &nbsp;4595296 Feb 13 17:58 golang-tests-1.7.4-1.el7.noarch.rpm<br />
+-rw-r--r--. 1 root root &nbsp; 641904 Feb 13 17:46 gomtree-0.3.0-1.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp; 3128 Feb 13 17:45 go-srpm-macros-2-3.el7.noarch.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;37796 Feb 13 17:45 kubernetes-1.5.2-2.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root 16498760 Feb 13 18:39 kubernetes-client-1.5.2-2.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root 28891956 Feb 13 19:08 kubernetes-master-1.5.2-2.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root 16274400 Feb 13 18:34 kubernetes-node-1.5.2-2.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root 19881040 Feb 13 18:41 kubernetes-unit-test-1.5.2-2.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;55636 Feb 13 17:45 libseccomp-2.3.0-1.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;63568 Feb 13 17:46 libseccomp-devel-2.3.0-1.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;36172 Feb 13 17:45 libseccomp-static-2.3.0-1.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root 14006536 Feb 13 18:33 ocid-0-0.7.git2e6070f.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp;1060952 Feb 13 17:49 oci-register-machine-0-1.11.gitdd0daef.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;28536 Feb 13 17:45 oci-systemd-hook-0.1.4-8.git45455fe.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; 782360 Feb 13 17:49 pytest-2.7.2-1.el7.noarch.rpm<br />
+-rw-r--r--. 1 root root &nbsp; 212368 Feb 13 17:46 python-coverage-4.0-0.10.b1.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; 104152 Feb 13 17:46 python-docker-py-1.10.6-1.el7.noarch.rpm<br />
+-rw-r--r--. 1 root root &nbsp; 189836 Feb 13 17:47 python-py-1.4.30-2.el7.noarch.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp;57532 Feb 13 17:46 python-websocket-client-0.34.0-3.el7.noarch.rpm<br />
+-rw-r--r--. 1 root root &nbsp;1610980 Feb 13 17:52 runc-1.0.0-3.rc2.gitc91b5be.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp;2233268 Feb 13 17:54 skopeo-0.1.17-1.el7.x86_64.rpm<br />
+-rw-r--r--. 1 root root &nbsp; &nbsp; 6504 Feb 13 17:46 skopeo-containers-0.1.17-1.el7.x86_64.rpm<br />
+<span style="font-size:18px">[root@all softs]# createrepo -v localyum</span></p>
+
+<p><span style="font-size:18px">[root@kubenode1 softs]# cat &lt;&lt;EOF &gt; /etc/yum.repos.d/local.repo</span><br />
+<span style="font-size:14px">[local]<br />
+name=local<br />
+baseurl=file:///data/softs/localyum<br />
+enabled=1<br />
+gpgcheck=0<br />
+EOF</span><br />
+<span style="font-size:18px">[root@all softs]# yum clean all<br />
+[root@all softs]# yum makecache</span></p>
+
+<p><span style="font-size:18px">[root@all softs]# yum install -y kubernetes etcd flannel</span></p>
+
+<p>Dependencies Resolved<br />
+=================================================================================================================================================<br />
+&nbsp;Package &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Arch &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;Version &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Repository &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Size<br />
+=================================================================================================================================================<br />
+Installing:<br />
+&nbsp;etcd &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;3.0.15-1.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;extras &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;9.2 M<br />
+&nbsp;flannel &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;0.5.5-2.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; extras &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;2.4 M<br />
+&nbsp;kubernetes &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1.5.2-2.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; local &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;37 k<br />
+Installing for dependencies:<br />
+&nbsp;conntrack-tools &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1.4.3-1.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; base &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;175 k<br />
+&nbsp;container-selinux &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; noarch &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;2:2.2-3.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; local &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;23 k<br />
+&nbsp;docker &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;2:1.12.6-14.gitf499e8b.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;local &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;24 M<br />
+&nbsp;docker-common &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;2:1.12.6-14.gitf499e8b.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;local &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;69 k<br />
+&nbsp;docker-rhel-push-plugin &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;2:1.12.6-14.gitf499e8b.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;local &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 2.0 M<br />
+&nbsp;kubernetes-client &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1.5.2-2.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; local &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;16 M<br />
+&nbsp;kubernetes-master &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1.5.2-2.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; local &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;28 M<br />
+&nbsp;kubernetes-node &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1.5.2-2.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; local &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;16 M<br />
+&nbsp;libnetfilter_cthelper &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1.0.0-9.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; base &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 18 k<br />
+&nbsp;libnetfilter_cttimeout &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1.0.0-6.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; base &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 18 k<br />
+&nbsp;libnetfilter_queue &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1.0.2-2.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; epel &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 23 k<br />
+&nbsp;oci-register-machine &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1:0-1.11.gitdd0daef.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; extras &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1.1 M<br />
+&nbsp;oci-systemd-hook &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1:0.1.4-9.git671c428.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;extras &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 29 k<br />
+&nbsp;python-rhsm-certificates &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1.17.9-1.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;base &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 38 k<br />
+&nbsp;skopeo-containers &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1:0.1.17-1.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;extras &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;7.4 k<br />
+&nbsp;socat &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1.7.2.2-5.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; base &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;255 k<br />
+&nbsp;yajl &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;x86_64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;2.0.4-4.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; base &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 39 k</p>
+
+<p>Transaction Summary<br />
+=================================================================================================================================================<br />
+Install &nbsp;3 Packages (+17 Dependent packages)</p>
+
+<p>Total download size: 99 M<br />
+Installed size: 529 M</p>
+
+<p>Installed:<br />
+&nbsp; etcd.x86_64 0:3.0.15-1.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;flannel.x86_64 0:0.5.5-2.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;kubernetes.x86_64 0:1.5.2-2.el7</p>
+
+<p>Dependency Installed:<br />
+&nbsp; conntrack-tools.x86_64 0:1.4.3-1.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; container-selinux.noarch 2:2.2-3.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;docker.x86_64 2:1.12.6-14.gitf499e8b.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;docker-common.x86_64 2:1.12.6-14.gitf499e8b.el7<br />
+&nbsp; docker-rhel-push-plugin.x86_64 2:1.12.6-14.gitf499e8b.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;kubernetes-client.x86_64 0:1.5.2-2.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;kubernetes-master.x86_64 0:1.5.2-2.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;kubernetes-node.x86_64 0:1.5.2-2.el7<br />
+&nbsp; libnetfilter_cthelper.x86_64 0:1.0.0-9.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; libnetfilter_cttimeout.x86_64 0:1.0.0-6.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; libnetfilter_queue.x86_64 0:1.0.2-2.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; oci-register-machine.x86_64 1:0-1.11.gitdd0daef.el7<br />
+&nbsp; oci-systemd-hook.x86_64 1:0.1.4-9.git671c428.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; python-rhsm-certificates.x86_64 0:1.17.9-1.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;skopeo-containers.x86_64 1:0.1.17-1.el7 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; socat.x86_64 0:1.7.2.2-5.el7<br />
+&nbsp; yajl.x86_64 0:2.0.4-4.el7</p>
+
+<p>Complete!<br />
+&nbsp;</p>
+
+<p><strong><span style="font-size:18px">(Option)Now I will config docker</span></strong></p>
+
+<p><span style="font-size:18px">[root@all ~]# rm -rf /etc/systemd/system/docker.service.d/docker.conf<br />
+[root@all ~]# cat /usr/lib/systemd/system/docker.service</span><br />
+[Unit]<br />
+Description=Docker Application Container Engine<br />
+Documentation=http://docs.docker.com<br />
+After=network.target docker-containerd.service<br />
+Wants=docker-storage-setup.service<br />
+Requires=docker-containerd.service rhel-push-plugin.socket</p>
+
+<p>[Service]<br />
+Type=notify<br />
+<strong>EnvironmentFile=-/etc/sysconfig/docker</strong><br />
+EnvironmentFile=-/etc/sysconfig/docker-storage<br />
+EnvironmentFile=-/etc/sysconfig/docker-network<br />
+Environment=GOTRACEBACK=crash<br />
+ExecStart=/usr/bin/dockerd-current \<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; --add-runtime oci=/usr/libexec/docker/docker-runc-current \<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; --default-runtime=oci \<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; --authorization-plugin=rhel-push-plugin \<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; --containerd /run/containerd.sock \<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; --exec-opt native.cgroupdriver=systemd \<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; --userland-proxy-path=/usr/libexec/docker/docker-proxy-current \<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $OPTIONS \<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $DOCKER_STORAGE_OPTIONS \<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $DOCKER_NETWORK_OPTIONS \<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $ADD_REGISTRY \<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $BLOCK_REGISTRY \<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $INSECURE_REGISTRY<br />
+ExecReload=/bin/kill -s HUP $MAINPID<br />
+LimitNOFILE=1048576<br />
+LimitNPROC=1048576<br />
+LimitCORE=infinity<br />
+TimeoutStartSec=0<br />
+Restart=on-abnormal</p>
+
+<p>[Install]<br />
+WantedBy=multi-user.target<br />
+<span style="font-size:18px">[root@all ~]# vi /etc/sysconfig/docker</span><br />
+# /etc/sysconfig/docker<br />
+# Modify these options if you want to change the way the docker daemon runs<br />
+<strong>OPTIONS=&#39;--selinux-enabled --log-driver=journald --graph=/data/env/docker --insecure-registry kubemaster:5000 --signature-enabled=false&#39;</strong><br />
+<span style="font-size:18px">[root@all ~]# systemctl enable docker &amp;&amp; systemctl restart docker<br />
+[root@all ~]# systemctl status docker</span></p>
+
+<p>&nbsp;</p>
+
+<p>&nbsp;</p>
+
+<p>&nbsp;</p>
+
+<p><span style="font-size:18px"><strong>Step 4&nbsp;config the kubernetes.</strong></span></p>
+
+<p><span style="font-size:18px">#Configure the Kubernetes services on all host.<br />
+[root@all ~]# mv /etc/kubernetes/config /etc/kubernetes/config.bak<br />
+[root@all ~]# vi /etc/kubernetes/config</span><br />
+KUBE_ETCD_SERVERS=&quot;--etcd-servers=http://<strong>kubemaster</strong>:2379&quot;<br />
+KUBE_LOGTOSTDERR=&quot;--logtostderr=true&quot;<br />
+KUBE_LOG_LEVEL=&quot;--v=0&quot;<br />
+KUBE_ALLOW_PRIV=&quot;--allow-privileged=false&quot;<br />
+KUBE_MASTER=&quot;--master=http://<strong>kubemaster</strong>:8080&quot;</p>
+
+<p>&nbsp;</p>
+
+<p><span style="font-size:18px">#Configure the Kubernetes services on master.</span><br />
+<span style="font-size:18px">[root@kubemaster ~]# mv /etc/etcd/etcd.conf /etc/etcd/etcd.conf.bak<br />
+[root@kubemaster ~]# vi /etc/etcd/etcd.conf</span><br />
+# [member]<br />
+ETCD_NAME=default<br />
+ETCD_DATA_DIR=&quot;/var/lib/etcd/default.etcd&quot;<br />
+ETCD_LISTEN_CLIENT_URLS=&quot;http://<strong>0.0.0.0</strong>:2379&quot;</p>
+
+<p>#[cluster]<br />
+ETCD_ADVERTISE_CLIENT_URLS=&quot;http://<strong>0.0.0.0</strong>:2379&quot;<br />
+<span style="font-size:18px">[root@kubemaster softs]# mv /etc/kubernetes/apiserver /etc/kubernetes/apiserver.bak<br />
+[root@kubemaster softs]# vi /etc/kubernetes/apiserver</span><br />
+# The address on the local server to listen to.<br />
+KUBE_API_ADDRESS=&quot;--address=<strong>0.0.0.0</strong>&quot;</p>
+
+<p># The port on the local server to listen on.<br />
+KUBE_API_PORT=&quot;--port=8080&quot;</p>
+
+<p># Port kubelets listen on<br />
+KUBELET_PORT=&quot;--kubelet-port=10250&quot;</p>
+
+<p># Address range to use for services<br />
+<strong>KUBE_SERVICE_ADDRESSES=&quot;--service-cluster-ip-range=10.254.0.0/16&quot;<br />
+KUBE_ETCD_SERVERS=&quot;--etcd-servers=http://127.0.0.1:2379&quot;</strong><br />
+KUBE_ADMISSION_CONTROL=&quot;--admission-control=NamespaceLifecycle,NamespaceExists,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota&quot;</p>
+
+<p># Add your own!<br />
+KUBE_API_ARGS=&quot;&quot;<br />
+<span style="font-size:18px">[root@kubemaster ~]# systemctl start etcd<br />
+[root@kubemaster ~]# etcdctl mkdir /kube-centos/network<br />
+[root@kubemaster ~]# etcdctl mk /kube-centos/network/config &quot;{ \&quot;Network\&quot;: \&quot;172.30.0.0/16\&quot;, \&quot;SubnetLen\&quot;: 24, \&quot;Backend\&quot;: { \&quot;Type\&quot;: \&quot;vxlan\&quot; } }&quot;</span><br />
+{ &quot;Network&quot;: &quot;172.30.0.0/16&quot;, &quot;SubnetLen&quot;: 24, &quot;Backend&quot;: { &quot;Type&quot;: &quot;vxlan&quot; } }<br />
+<span style="font-size:18px">[root@kubemaster softs]# mv /etc/sysconfig/flanneld /etc/sysconfig/flanneld.bak<br />
+[root@kubemaster softs]# vi /etc/sysconfig/flanneld</span><br />
+# Flanneld configuration options</p>
+
+<p># etcd url location. &nbsp;Point this to the server where etcd runs<br />
+FLANNEL_ETCD_ENDPOINTS=&quot;http://<strong>kubemaster</strong>:2379&quot;</p>
+
+<p># etcd config key. &nbsp;This is the configuration key that flannel queries<br />
+# For address range assignment<br />
+FLANNEL_ETCD_PREFIX=&quot;/kube-centos/network&quot;</p>
+
+<p># Any additional options that you want to pass<br />
+#FLANNEL_OPTIONS=&quot;&quot;<br />
+<span style="font-size:18px">[root@kubemaster softs]# for SERVICES in etcd kube-apiserver kube-controller-manager kube-scheduler flanneld; do<br />
+&nbsp;&nbsp; &nbsp;systemctl restart $SERVICES<br />
+&nbsp;&nbsp; &nbsp;systemctl enable $SERVICES<br />
+&nbsp;&nbsp; &nbsp;systemctl status $SERVICES<br />
+done</span><br />
+<span style="font-size:18px">[root@kubemaster softs]# ps -ef | grep kube</span><br />
+kube &nbsp; &nbsp; &nbsp; 3101 &nbsp; &nbsp; &nbsp;1 &nbsp;0 13:40 ? &nbsp; &nbsp; &nbsp; &nbsp;00:00:05 /usr/bin/kube-apiserver --logtostderr=true --v=0 --etcd-servers=http://kubemaster:2379 --address=0.0.0.0 --port=8080 --kubelet-port=10250 --allow-privileged=false --service-cluster-ip-range=10.254.0.0/16<br />
+kube &nbsp; &nbsp; &nbsp; 3130 &nbsp; &nbsp; &nbsp;1 &nbsp;1 13:40 ? &nbsp; &nbsp; &nbsp; &nbsp;00:00:07 /usr/bin/kube-controller-manager --logtostderr=true --v=0 --master=http://kubemaster:8080<br />
+kube &nbsp; &nbsp; &nbsp; 3156 &nbsp; &nbsp; &nbsp;1 &nbsp;0 13:40 ? &nbsp; &nbsp; &nbsp; &nbsp;00:00:01 /usr/bin/kube-scheduler --logtostderr=true --v=0 --master=http://kubemaster:8080<br />
+root &nbsp; &nbsp; &nbsp; 3182 &nbsp; &nbsp; &nbsp;1 &nbsp;0 13:40 ? &nbsp; &nbsp; &nbsp; &nbsp;00:00:00 /usr/bin/flanneld -etcd-endpoints=http://kubemaster:2379 -etcd-prefix=/kube-centos/network<br />
+root &nbsp; &nbsp; &nbsp; 3225 &nbsp; 2110 &nbsp;0 13:51 pts/0 &nbsp; &nbsp;00:00:00 grep --color=auto kube</p>
+
+<p>&nbsp;</p>
+
+<p><span style="font-size:18px">#Configure the Kubernetes services on the nodes.(kubenode1&amp;kubenode0)</span></p>
+
+<p><span style="font-size:18px">[root@kubenode0 softs]# mv /etc/kubernetes/kubelet /etc/kubernetes/kubelet.bak<br />
+[root@kubenode0 softs]# vi /etc/kubernetes/kubelet</span><br />
+# The address for the info server to serve on<br />
+KUBELET_ADDRESS=&quot;--address=<strong>0.0.0.0</strong>&quot;</p>
+
+<p># The port for the info server to serve on<br />
+KUBELET_PORT=&quot;--port=10250&quot;</p>
+
+<p># You may leave this blank to use the actual hostname<br />
+# Check the node number!<br />
+KUBELET_HOSTNAME=&quot;--hostname-override=<strong>kubenode0</strong>&quot;</p>
+
+<p># Location of the api-server<br />
+KUBELET_API_SERVER=&quot;--api-servers=http://<strong>kubemaster</strong>:8080&quot;</p>
+
+<p># Add your own!<br />
+KUBELET_ARGS=&quot;&quot;<br />
+<span style="font-size:18px">[root@kubenode1 softs]# vi /etc/kubernetes/kubelet</span><br />
+# The address for the info server to serve on<br />
+KUBELET_ADDRESS=&quot;--address=<strong>0.0.0.0</strong>&quot;</p>
+
+<p># The port for the info server to serve on<br />
+KUBELET_PORT=&quot;--port=10250&quot;</p>
+
+<p># You may leave this blank to use the actual hostname<br />
+# Check the node number!<br />
+KUBELET_HOSTNAME=&quot;--hostname-override=<strong>kubenode1</strong>&quot;</p>
+
+<p># Location of the api-server<br />
+KUBELET_API_SERVER=&quot;--api-servers=http://<strong>kubemaster</strong>:8080&quot;</p>
+
+<p># Add your own!<br />
+KUBELET_ARGS=&quot;&quot;<br />
+<span style="font-size:18px">[root@kubenode0 softs]# mv /etc/sysconfig/flanneld /etc/sysconfig/flanneld.bak<br />
+[root@kubenode0 softs]# vi /etc/sysconfig/flanneld</span><br />
+# Flanneld configuration options</p>
+
+<p># etcd url location. &nbsp;Point this to the server where etcd runs<br />
+FLANNEL_ETCD_ENDPOINTS=&quot;http://<strong>kubemaster</strong>:2379&quot;</p>
+
+<p># etcd config key. &nbsp;This is the configuration key that flannel queries<br />
+# For address range assignment<br />
+FLANNEL_ETCD_PREFIX=&quot;/kube-centos/network&quot;</p>
+
+<p># Any additional options that you want to pass<br />
+#FLANNEL_OPTIONS=&quot;&quot;</p>
+
+<p><span style="font-size:18px">[root@kubenode0 ~]# for SERVICES in kube-proxy kubelet flanneld docker; do<br />
+&nbsp; &nbsp; systemctl restart $SERVICES<br />
+&nbsp; &nbsp; systemctl enable $SERVICES<br />
+&nbsp; &nbsp; systemctl status $SERVICES<br />
+done</span></p>
+
+<p><span style="font-size:18px">[root@kubenode0 ~]# ps -ef | grep kube</span><br />
+root &nbsp; &nbsp; &nbsp; 2976 &nbsp; &nbsp; &nbsp;1 &nbsp;3 15:10 ? &nbsp; &nbsp; &nbsp; &nbsp;00:00:00 /usr/bin/kube-proxy --logtostderr=true --v=0 --master=http://kubemaster:8080<br />
+root &nbsp; &nbsp; &nbsp; 3063 &nbsp; &nbsp; &nbsp;1 &nbsp;0 15:10 ? &nbsp; &nbsp; &nbsp; &nbsp;00:00:00 /usr/bin/flanneld -etcd-endpoints=http://kubemaster:2379 -etcd-prefix=/kube-centos/network<br />
+root &nbsp; &nbsp; &nbsp; 3214 &nbsp; &nbsp; &nbsp;1 &nbsp;5 15:10 ? &nbsp; &nbsp; &nbsp; &nbsp;00:00:00 /usr/bin/kubelet --logtostderr=true --v=0 --api-servers=http://kubemaster:8080 --address=0.0.0.0 --port=10250 --hostname-override=kubenode0 --allow-privileged=false<br />
+root &nbsp; &nbsp; &nbsp; 3357 &nbsp; 2569 &nbsp;0 15:10 pts/0 &nbsp; &nbsp;00:00:00 grep --color=auto kube</p>
+
+<p>&nbsp;</p>
+
+<p><span style="font-size:18px">#Configure kubectl<br />
+[root@kubenode0 ~]# kubectl config set-cluster default-cluster --server=http://kubemaster:8080<br />
+[root@kubenode0 ~]# kubectl config set-context default-context --cluster=default-cluster --user=default-admin<br />
+[root@kubenode0 ~]# kubectl config use-context default-context</span></p>
+
+<p>&nbsp;</p>
+
+<p>&nbsp;</p>
+
+<p><span style="font-size:18px"><strong>Step 5&nbsp;The cluster should be running!&nbsp;</strong></span></p>
+
+<p><span style="font-size:18px">[root@kubemaster ~]# kubectl cluster-info</span><br />
+Kubernetes master is running at http://localhost:8080</p>
+
+<p>To further debug and diagnose cluster problems, use &#39;kubectl cluster-info dump&#39;.<br />
+<span style="font-size:18px">[root@kubemaster ~]# kubectl get deployment --namespace=kube-system</span><br />
+No resources found.<br />
+<span style="font-size:18px">[root@kubemaster ~]# kubectl get nodes</span><br />
+NAME &nbsp; &nbsp; &nbsp; &nbsp;STATUS &nbsp; &nbsp;AGE<br />
+kubenode0 &nbsp; Ready &nbsp; &nbsp; 4m<br />
+kubenode1 &nbsp; Ready &nbsp; &nbsp; 2m<br />
+<span style="font-size:18px">[root@kubenode0 ~]# kubectl get nodes</span><br />
+NAME &nbsp; &nbsp; &nbsp; &nbsp;STATUS &nbsp; &nbsp;AGE<br />
+kubenode0 &nbsp; Ready &nbsp; &nbsp; 4m<br />
+kubenode1 &nbsp; Ready &nbsp; &nbsp; 2m<br />
+<span style="font-size:18px">[root@kubenode1 ~]# kubectl get nodes</span><br />
+NAME &nbsp; &nbsp; &nbsp; &nbsp;STATUS &nbsp; &nbsp;AGE<br />
+kubenode0 &nbsp; Ready &nbsp; &nbsp; 4m<br />
+kubenode1 &nbsp; Ready &nbsp; &nbsp; 2m</p>
+
+<p><span style="font-size:18px">[root@kubenode0 ~]# kubectl version</span><br />
+Client Version: version.Info{Major:&quot;1&quot;, Minor:&quot;5&quot;, GitVersion:&quot;v1.5.2&quot;, GitCommit:&quot;08e099554f3c31f6e6f07b448ab3ed78d0520507&quot;, GitTreeState:&quot;clean&quot;, BuildDate:&quot;2017-01-19T19:39:41Z&quot;, GoVersion:&quot;go1.7.4&quot;, Compiler:&quot;gc&quot;, Platform:&quot;linux/amd64&quot;}<br />
+Server Version: version.Info{Major:&quot;1&quot;, Minor:&quot;5&quot;, GitVersion:&quot;v1.5.2&quot;, GitCommit:&quot;08e099554f3c31f6e6f07b448ab3ed78d0520507&quot;, GitTreeState:&quot;clean&quot;, BuildDate:&quot;2017-01-19T19:39:41Z&quot;, GoVersion:&quot;go1.7.4&quot;, Compiler:&quot;gc&quot;, Platform:&quot;linux/amd64&quot;}</p>
+
+<p>&nbsp;</p>
+
+<p><span style="font-size:18px">Now, we browser&nbsp;http://192.168.1.158:8080/api/ on your windows:</span><br />
+{<br />
+&nbsp; &quot;kind&quot;: &quot;APIVersions&quot;,<br />
+&nbsp; &quot;versions&quot;: [<br />
+&nbsp; &nbsp; &quot;v1&quot;<br />
+&nbsp; ],<br />
+&nbsp; &quot;serverAddressByClientCIDRs&quot;: [<br />
+&nbsp; &nbsp; {<br />
+&nbsp; &nbsp; &nbsp; &quot;clientCIDR&quot;: &quot;0.0.0.0/0&quot;,<br />
+&nbsp; &nbsp; &nbsp; &quot;serverAddress&quot;: &quot;192.168.1.158:6443&quot;<br />
+&nbsp; &nbsp; }<br />
+&nbsp; ]<br />
+}</p>
+
+<p><span style="font-size:18px">https://192.168.1.158:6443/api:</span></p>
+
+<pre>
+{
+  &quot;kind&quot;: &quot;APIVersions&quot;,
+  &quot;versions&quot;: [
+    &quot;v1&quot;
+  ],
+  &quot;serverAddressByClientCIDRs&quot;: [
+    {
+      &quot;clientCIDR&quot;: &quot;0.0.0.0/0&quot;,
+      &quot;serverAddress&quot;: &quot;192.168.1.158:6443&quot;
+    }
+  ]
+}</pre>
+
+<p>&nbsp;</p>
+
+<p><span style="font-size:18px"><strong>Step 6&nbsp;Deploy Addons Kube-dns</strong></span><span style="font-size:18px"><strong>.</strong></span></p>
+
+<p><span style="font-size:18px">Kubernetes DNS schedules a DNS Pod and Service on the cluster, and configures the kubelets to tell individual containers to use the DNS Service&rsquo;s IP to resolve DNS names. It&#39;s recommended.</span></p>
+
+<p><span style="font-size:18px">[root@kubemaster ~]# mkdir -p /data/k8s/addons/dns<br />
+[root@kubemaster ~]# cd /data/k8s/addons/dns<br />
+[root@kubemaster dns]# for item in Makefile kubedns-controller.yaml.base kubedns-svc.yaml.base transforms2salt.sed transforms2sed.sed; do<br />
+&nbsp;&nbsp; &nbsp;wget https://raw.githubusercontent.com/kubernetes/kubernetes/master/cluster/addons/dns/$item<br />
+done<br />
+[root@kubemaster dns]# ll</span><br />
+total 24<br />
+-rw-r--r--. 1 root root 5064 Feb 16 13:05 kubedns-controller.yaml.base<br />
+-rw-r--r--. 1 root root &nbsp;990 Feb 16 13:05 kubedns-svc.yaml.base<br />
+-rw-r--r--. 1 root root 1138 Feb 16 13:05 Makefile<br />
+-rw-r--r--. 1 root root &nbsp;318 Feb 16 13:05 transforms2salt.sed<br />
+-rw-r--r--. 1 root root &nbsp;251 Feb 16 13:05 transforms2sed.sed</p>
+
+<p><span style="font-size:18px">[root@kubemaster dns]# cat transforms2sed.sed</span><br />
+s/__PILLAR__DNS__SERVER__/<strong>$DNS_SERVER_IP</strong>/g<br />
+s/__PILLAR__DNS__DOMAIN__/<strong>$DNS_DOMAIN</strong>/g<br />
+/__PILLAR__FEDERATIONS__DOMAIN__MAP__/d<br />
+s/__MACHINE_GENERATED_WARNING__/Warning: This is a file generated from the base underscore template file: __SOURCE_FILENAME__/g</p>
+
+<p><span style="font-size:18px">[root@kubemaster dns]# kubectl get svc --all-namespaces</span><br />
+NAMESPACE &nbsp; NAME &nbsp; &nbsp; &nbsp; &nbsp; CLUSTER-IP &nbsp; EXTERNAL-IP &nbsp; PORT(S) &nbsp; AGE<br />
+default &nbsp; &nbsp; kubernetes &nbsp; 10.254.0.1 &nbsp; &lt;none&gt; &nbsp; &nbsp; &nbsp; &nbsp;443/TCP &nbsp; 2d<br />
+<span style="font-size:18px">[root@kubemaster dns]# DNS_SERVER_IP=10.254.0.10<br />
+[root@kubemaster dns]# DNS_DOMAIN=cluster.local<br />
+[root@kubemaster dns]# cat &lt;&lt;EOF &gt; transforms2sed.sed<br />
+s/__PILLAR__DNS__SERVER__/$DNS_SERVER_IP/g<br />
+s/__PILLAR__DNS__DOMAIN__/$DNS_DOMAIN/g<br />
+/__PILLAR__FEDERATIONS__DOMAIN__MAP__/d<br />
+s/__MACHINE_GENERATED_WARNING__/Warning: This is a file generated from the base underscore template file: __SOURCE_FILENAME__/g<br />
+EOF</span><br />
+<span style="font-size:18px">[root@kubemaster dns]# cat transforms2sed.sed</span><br />
+s/__PILLAR__DNS__SERVER__/10.254.0.10/g<br />
+s/__PILLAR__DNS__DOMAIN__/cluster.local/g<br />
+/__PILLAR__FEDERATIONS__DOMAIN__MAP__/d<br />
+s/__MACHINE_GENERATED_WARNING__/Warning: This is a file generated from the base underscore template file: __SOURCE_FILENAME__/g</p>
+
+<p><span style="font-size:18px">[root@kubemaster dns]# make</span><br />
+sed -f transforms2salt.sed kubedns-controller.yaml.base | sed s/__SOURCE_FILENAME__/kubedns-controller.yaml.base/g &gt; kubedns-controller.yaml.in<br />
+sed -f transforms2salt.sed kubedns-svc.yaml.base | sed s/__SOURCE_FILENAME__/kubedns-svc.yaml.base/g &gt; kubedns-svc.yaml.in<br />
+sed -f transforms2sed.sed kubedns-controller.yaml.base &nbsp;| sed s/__SOURCE_FILENAME__/kubedns-controller.yaml.base/g &gt; kubedns-controller.yaml.sed<br />
+sed -f transforms2sed.sed kubedns-svc.yaml.base &nbsp;| sed s/__SOURCE_FILENAME__/kubedns-svc.yaml.base/g &gt; kubedns-svc.yaml.sed</p>
+
+<p>&nbsp;</p>
+
+<p><span style="font-size:18px">#Now I will edit&nbsp;kubedns-controller.yaml.sed, remove volume, avoid two issue:<br />
+#1.error: error validating &quot;kubedns-controller.yaml.sed.bak&quot;: error validating data: found invalid field optional for v1.ConfigMapVolumeSource; if you choose to ignore these errors, turn validation off with --validate=false<br />
+#2.after create container, tail&nbsp;/var/log/messages, show: configmaps &quot;kube-dns&quot; not found&nbsp;<br />
+[root@kubemaster dns]# vi kubedns-controller.yaml.sed</span><br />
+# Copyright 2016 The Kubernetes Authors.<br />
+#<br />
+# Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);<br />
+# you may not use this file except in compliance with the License.<br />
+# You may obtain a copy of the License at<br />
+#<br />
+# &nbsp; &nbsp; http://www.apache.org/licenses/LICENSE-2.0<br />
+#<br />
+# Unless required by applicable law or agreed to in writing, software<br />
+# distributed under the License is distributed on an &quot;AS IS&quot; BASIS,<br />
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.<br />
+# See the License for the specific language governing permissions and<br />
+# limitations under the License.</p>
+
+<p># Should keep target in cluster/addons/dns-horizontal-autoscaler/dns-horizontal-autoscaler.yaml<br />
+# in sync with this file.</p>
+
+<p># Warning: This is a file generated from the base underscore template file: kubedns-controller.yaml.base</p>
+
+<p>apiVersion: extensions/v1beta1<br />
+kind: Deployment<br />
+metadata:<br />
+&nbsp; name: kube-dns<br />
+&nbsp; namespace: kube-system<br />
+&nbsp; labels:<br />
+&nbsp; &nbsp; k8s-app: kube-dns<br />
+&nbsp; &nbsp; kubernetes.io/cluster-service: &quot;true&quot;<br />
+spec:<br />
+&nbsp; # replicas: not specified here:<br />
+&nbsp; # 1. In order to make Addon Manager do not reconcile this replicas parameter.<br />
+&nbsp; # 2. Default is 1.<br />
+&nbsp; # 3. Will be tuned in real time if DNS horizontal auto-scaling is turned on.<br />
+&nbsp; strategy:<br />
+&nbsp; &nbsp; rollingUpdate:<br />
+&nbsp; &nbsp; &nbsp; maxSurge: 10%<br />
+&nbsp; &nbsp; &nbsp; maxUnavailable: 0<br />
+&nbsp; selector:<br />
+&nbsp; &nbsp; matchLabels:<br />
+&nbsp; &nbsp; &nbsp; k8s-app: kube-dns<br />
+&nbsp; template:<br />
+&nbsp; &nbsp; metadata:<br />
+&nbsp; &nbsp; &nbsp; labels:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; k8s-app: kube-dns<br />
+&nbsp; &nbsp; &nbsp; annotations:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; scheduler.alpha.kubernetes.io/critical-pod: &#39;&#39;<br />
+&nbsp; &nbsp; &nbsp; &nbsp; scheduler.alpha.kubernetes.io/tolerations: &#39;[{&quot;key&quot;:&quot;CriticalAddonsOnly&quot;, &quot;operator&quot;:&quot;Exists&quot;}]&#39;<br />
+&nbsp; &nbsp; spec:<br />
+<strong># &nbsp; &nbsp; &nbsp;volumes:<br />
+# &nbsp; &nbsp; &nbsp;- name: kube-dns-config<br />
+# &nbsp; &nbsp; &nbsp; &nbsp;configMap:<br />
+# &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;name: kube-dns<br />
+# &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;optional: true</strong><br />
+&nbsp; &nbsp; &nbsp; containers:<br />
+&nbsp; &nbsp; &nbsp; - name: kubedns<br />
+&nbsp; &nbsp; &nbsp; &nbsp; image: gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.12.1<br />
+&nbsp; &nbsp; &nbsp; &nbsp; resources:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; # TODO: Set memory limits when we&#39;ve profiled the container for large<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; # clusters, then set request = limit to keep this container in<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; # guaranteed class. Currently, this container falls into the<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; # &quot;burstable&quot; category so the kubelet doesn&#39;t backoff from restarting it.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; limits:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; memory: 170Mi<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; requests:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; cpu: 100m<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; memory: 70Mi<br />
+&nbsp; &nbsp; &nbsp; &nbsp; livenessProbe:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; httpGet:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; path: /healthcheck/kubedns<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; port: 10054<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; scheme: HTTP<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; initialDelaySeconds: 60<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; timeoutSeconds: 5<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; successThreshold: 1<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; failureThreshold: 5<br />
+&nbsp; &nbsp; &nbsp; &nbsp; readinessProbe:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; httpGet:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; path: /readiness<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; port: 8081<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; scheme: HTTP<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; # we poll on pod startup for the Kubernetes master service and<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; # only setup the /readiness HTTP server once that&#39;s available.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; initialDelaySeconds: 3<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; timeoutSeconds: 5<br />
+&nbsp; &nbsp; &nbsp; &nbsp; args:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - --domain=cluster.local.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - --dns-port=10053<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - --config-dir=/kube-dns-config<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - --v=2<br />
+&nbsp; &nbsp; &nbsp; &nbsp; env:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - name: PROMETHEUS_PORT<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; value: &quot;10055&quot;<br />
+&nbsp; &nbsp; &nbsp; &nbsp; ports:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - containerPort: 10053<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; name: dns-local<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; protocol: UDP<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - containerPort: 10053<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; name: dns-tcp-local<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; protocol: TCP<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - containerPort: 10055<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; name: metrics<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; protocol: TCP<br />
+<strong># &nbsp; &nbsp; &nbsp; &nbsp;volumeMounts:<br />
+# &nbsp; &nbsp; &nbsp; &nbsp;- name: kube-dns-config<br />
+# &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;mountPath: /kube-dns-config</strong><br />
+&nbsp; &nbsp; &nbsp; - name: dnsmasq<br />
+&nbsp; &nbsp; &nbsp; &nbsp; image: gcr.io/google_containers/k8s-dns-dnsmasq-amd64:1.12.1<br />
+&nbsp; &nbsp; &nbsp; &nbsp; livenessProbe:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; httpGet:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; path: /healthcheck/dnsmasq<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; port: 10054<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; scheme: HTTP<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; initialDelaySeconds: 60<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; timeoutSeconds: 5<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; successThreshold: 1<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; failureThreshold: 5<br />
+&nbsp; &nbsp; &nbsp; &nbsp; args:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - --cache-size=1000<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - --server=/cluster.local/127.0.0.1#10053<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - --server=/in-addr.arpa/127.0.0.1#10053<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - --server=/ip6.arpa/127.0.0.1#10053<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - --log-facility=-<br />
+&nbsp; &nbsp; &nbsp; &nbsp; ports:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - containerPort: 53<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; name: dns<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; protocol: UDP<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - containerPort: 53<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; name: dns-tcp<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; protocol: TCP<br />
+&nbsp; &nbsp; &nbsp; &nbsp; # see: https://github.com/kubernetes/kubernetes/issues/29055 for details<br />
+&nbsp; &nbsp; &nbsp; &nbsp; resources:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; requests:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; cpu: 150m<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; memory: 10Mi<br />
+&nbsp; &nbsp; &nbsp; - name: sidecar<br />
+&nbsp; &nbsp; &nbsp; &nbsp; image: gcr.io/google_containers/k8s-dns-sidecar-amd64:1.12.1<br />
+&nbsp; &nbsp; &nbsp; &nbsp; livenessProbe:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; httpGet:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; path: /metrics<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; port: 10054<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; scheme: HTTP<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; initialDelaySeconds: 60<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; timeoutSeconds: 5<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; successThreshold: 1<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; failureThreshold: 5<br />
+&nbsp; &nbsp; &nbsp; &nbsp; args:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - --v=2<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - --logtostderr<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - --probe=kubedns,127.0.0.1:10053,kubernetes.default.svc.cluster.local,5,A<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - --probe=dnsmasq,127.0.0.1:53,kubernetes.default.svc.cluster.local,5,A<br />
+&nbsp; &nbsp; &nbsp; &nbsp; ports:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - containerPort: 10054<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; name: metrics<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; protocol: TCP<br />
+&nbsp; &nbsp; &nbsp; &nbsp; resources:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; requests:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; memory: 20Mi<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; cpu: 10m<br />
+&nbsp; &nbsp; &nbsp; dnsPolicy: Default &nbsp;# Don&#39;t use cluster DNS.<br />
+<span style="font-size:18px">[root@kubemaster dns]# cat kubedns-svc.yaml.sed</span><br />
+# Copyright 2016 The Kubernetes Authors.<br />
+#<br />
+# Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);<br />
+# you may not use this file except in compliance with the License.<br />
+# You may obtain a copy of the License at<br />
+#<br />
+# &nbsp; &nbsp; http://www.apache.org/licenses/LICENSE-2.0<br />
+#<br />
+# Unless required by applicable law or agreed to in writing, software<br />
+# distributed under the License is distributed on an &quot;AS IS&quot; BASIS,<br />
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.<br />
+# See the License for the specific language governing permissions and<br />
+# limitations under the License.</p>
+
+<p># Warning: This is a file generated from the base underscore template file: kubedns-svc.yaml.base</p>
+
+<p>apiVersion: v1<br />
+kind: Service<br />
+metadata:<br />
+&nbsp; name: kube-dns<br />
+&nbsp; namespace: kube-system<br />
+&nbsp; labels:<br />
+&nbsp; &nbsp; k8s-app: kube-dns<br />
+&nbsp; &nbsp; kubernetes.io/cluster-service: &quot;true&quot;<br />
+&nbsp; &nbsp; kubernetes.io/name: &quot;KubeDNS&quot;<br />
+spec:<br />
+&nbsp; selector:<br />
+&nbsp; &nbsp; k8s-app: kube-dns<br />
+&nbsp; clusterIP: 10.254.0.10<br />
+&nbsp; ports:<br />
+&nbsp; - name: dns<br />
+&nbsp; &nbsp; port: 53<br />
+&nbsp; &nbsp; protocol: UDP<br />
+&nbsp; - name: dns-tcp<br />
+&nbsp; &nbsp; port: 53<br />
+&nbsp; &nbsp; protocol: TCP</p>
+
+<p><span style="font-size:18px">[root@kubemaster dns]# vi /etc/kubernetes/controller-manager&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;#otherwise you will see the error: No API token found for service account &quot;default&quot;</span><br />
+KUBE_CONTROLLER_MANAGER_ARGS=&quot;--service-account-private-key-file=/var/run/kubernetes/apiserver.key --root-ca-file=/var/run/kubernetes/apiserver.crt&quot;<br />
+<span style="font-size:18px">[root@kubemaster dns]# kubectl create -f kubedns-controller.yaml.sed</span><br />
+deployment &quot;kube-dns&quot; created<br />
+<span style="font-size:18px">[root@kubemaster dns]# kubectl create -f kubedns-svc.yaml.sed</span><br />
+service &quot;kube-dns&quot; created<br />
+<span style="font-size:18px">[root@kubemaster ~]# tail -f /var/log/messages</span><br />
+Feb 16 13:31:34 kubemaster kube-apiserver: W0216 13:31:34.202781 &nbsp; &nbsp;2559 listers.go:69] can not retrieve list of objects using index : Index with name namespace does not exist<br />
+Feb 16 13:31:34 kubemaster kube-controller-manager: I0216 13:31:34.205627 &nbsp; &nbsp;2570 event.go:217] Event(api.ObjectReference{Kind:&quot;Deployment&quot;, Namespace:&quot;kube-system&quot;, Name:&quot;kube-dns&quot;, UID:&quot;2dce52e0-f409-11e6-bd2a-00155d01bd15&quot;, APIVersion:&quot;extensions&quot;, ResourceVersion:&quot;66591&quot;, FieldPath:&quot;&quot;}): type: &#39;Normal&#39; reason: &#39;ScalingReplicaSet&#39; Scaled up replica set kube-dns-4127456819 to 1<br />
+Feb 16 13:31:34 kubemaster kube-controller-manager: I0216 13:31:34.314793 &nbsp; &nbsp;2570 event.go:217] Event(api.ObjectReference{Kind:&quot;ReplicaSet&quot;, Namespace:&quot;kube-system&quot;, Name:&quot;kube-dns-4127456819&quot;, UID:&quot;2dd060ed-f409-11e6-bd2a-00155d01bd15&quot;, APIVersion:&quot;extensions&quot;, ResourceVersion:&quot;66592&quot;, FieldPath:&quot;&quot;}): type: &#39;Normal&#39; reason: &#39;SuccessfulCreate&#39; Created pod: kube-dns-4127456819-82lgs<br />
+Feb 16 13:31:34 kubemaster kube-scheduler: I0216 13:31:34.369384 &nbsp; &nbsp;2582 event.go:217] Event(api.ObjectReference{Kind:&quot;Pod&quot;, Namespace:&quot;kube-system&quot;, Name:&quot;kube-dns-4127456819-82lgs&quot;, UID:&quot;2dd40e52-f409-11e6-bd2a-00155d01bd15&quot;, APIVersion:&quot;v1&quot;, ResourceVersion:&quot;66595&quot;, FieldPath:&quot;&quot;}): type: &#39;Normal&#39; reason: &#39;Scheduled&#39; Successfully assigned kube-dns-4127456819-82lgs to kubenode1<br />
+<span style="font-size:18px">[root@kubenode0 ~]# tail -f /var/log/messages</span><br />
+Feb 16 16:39:22 kubenode0 journal: I0216 08:39:22.271586 &nbsp; &nbsp; &nbsp; 1 dns.go:462] Added SRV record &amp;{Host:kubernetes.default.svc.cluster.local. Port:443 Priority:10 Weight:10 Text: Mail:false Ttl:30 TargetStrip:0 Group: Key:}<br />
+Feb 16 16:39:22 kubenode0 journal: I0216 08:39:22.271648 &nbsp; &nbsp; &nbsp; 1 dns.go:264] New service: kube-dns<br />
+Feb 16 16:39:22 kubenode0 journal: I0216 08:39:22.271694 &nbsp; &nbsp; &nbsp; 1 dns.go:462] Added SRV record &amp;{Host:kube-dns.kube-system.svc.cluster.local. Port:53 Priority:10 Weight:10 Text: Mail:false Ttl:30 TargetStrip:0 Group: Key:}<br />
+Feb 16 16:39:22 kubenode0 journal: I0216 08:39:22.271743 &nbsp; &nbsp; &nbsp; 1 dns.go:462] Added SRV record &amp;{Host:kube-dns.kube-system.svc.cluster.local. Port:53 Priority:10 Weight:10 Text: Mail:false Ttl:30 TargetStrip:0 Group: Key:}<br />
+Feb 16 16:39:32 kubenode0 journal: E0216 08:39:32.268986 &nbsp; &nbsp; &nbsp; 1 sync_dir.go:68] Error loading config from /kube-dns-config: lstat /kube-dns-config: no such file or directory<br />
+Feb 16 16:39:38 kubenode0 kubelet: I0216 16:39:38.034635 &nbsp; &nbsp;2365 operation_executor.go:917] MountVolume.SetUp succeeded for volume &quot;kubernetes.io/secret/119e9bc4-f41d-11e6-bd2a-00155d01bd15-default-token-hqkj1&quot; (spec.Name: &quot;default-token-hqkj1&quot;) pod &quot;119e9bc4-f41d-11e6-bd2a-00155d01bd15&quot; (UID: &quot;119e9bc4-f41d-11e6-bd2a-00155d01bd15&quot;).<br />
+Feb 16 16:39:42 kubenode0 journal: E0216 08:39:42.268349 &nbsp; &nbsp; &nbsp; 1 sync_dir.go:68] Error loading config from /kube-dns-config: lstat /kube-dns-config: no such file or directory<br />
+Feb 16 16:38:42 kubenode0 journal: E0216 08:38:42.268428 &nbsp; &nbsp; &nbsp; 1 sync_dir.go:68] Error loading config from /kube-dns-config: lstat /kube-dns-config: no such file or directory&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;#“≈¡ÙŒ Ã‚£¨Œ¥Ω‚<br />
+Feb 16 16:38:52 kubenode0 journal: E0216 08:38:52.268351 &nbsp; &nbsp; &nbsp; 1 sync_dir.go:68] Error loading config from /kube-dns-config: lstat /kube-dns-config: no such file or directory<br />
+Feb 16 16:39:02 kubenode0 journal: E0216 08:39:02.268340 &nbsp; &nbsp; &nbsp; 1 sync_dir.go:68] Error loading config from /kube-dns-config: lstat /kube-dns-config: no such file or directory<br />
+<span style="font-size:18px">[root@kubenode0 ~]# docker images &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;#you should see the images from&nbsp;gcr.io, if not, you may docker pull them by yourself.</span><br />
+REPOSITORY &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;TAG &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; IMAGE ID &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;CREATED &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; SIZE<br />
+gcr.io/google_containers/k8s-dns-sidecar-amd64 &nbsp; &nbsp;1.12.1 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;ee26c4c79910 &nbsp; &nbsp; &nbsp; &nbsp;2 weeks ago &nbsp; &nbsp; &nbsp; &nbsp; 13 MB<br />
+gcr.io/google_containers/k8s-dns-kube-dns-amd64 &nbsp; 1.12.1 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;eebb1533941f &nbsp; &nbsp; &nbsp; &nbsp;2 weeks ago &nbsp; &nbsp; &nbsp; &nbsp; 52.34 MB<br />
+gcr.io/google_containers/k8s-dns-dnsmasq-amd64 &nbsp; &nbsp;1.12.1 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;d54965d35d2f &nbsp; &nbsp; &nbsp; &nbsp;2 weeks ago &nbsp; &nbsp; &nbsp; &nbsp; 5.15 MB<br />
+kubemaster:5000/nginx-https &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; latest &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;4290b082ed77 &nbsp; &nbsp; &nbsp; &nbsp;3 months ago &nbsp; &nbsp; &nbsp; &nbsp;571.8 MB<br />
+gcr.io/google-containers/pause-amd64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;3.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 99e59f495ffa &nbsp; &nbsp; &nbsp; &nbsp;9 months ago &nbsp; &nbsp; &nbsp; &nbsp;746.9 kB<br />
+gcr.io/google_containers/pause-amd64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;3.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 99e59f495ffa &nbsp; &nbsp; &nbsp; &nbsp;9 months ago &nbsp; &nbsp; &nbsp; &nbsp;746.9 kB<br />
+<span style="font-size:18px">[root@kubenode0 ~]# docker ps -a</span><br />
+CONTAINER ID &nbsp; &nbsp; &nbsp; &nbsp;IMAGE &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;COMMAND &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;CREATED &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; STATUS &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;PORTS &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; NAMES<br />
+25716ebb42bc &nbsp; &nbsp; &nbsp; &nbsp;gcr.io/google_containers/k8s-dns-sidecar-amd64:1.12.1 &nbsp; &nbsp;&quot;/sidecar --v=2 --log&quot; &nbsp; 3 minutes ago &nbsp; &nbsp; &nbsp; Up 3 minutes &nbsp; &nbsp; &nbsp; &nbsp;k8s_sidecar.e51859d_kube-dns-3019842428-0x0v9_kube-system_119e9bc4-f41d-11e6-bd2a-00155d01bd15_012ede0f<br />
+005670d6e5f4 &nbsp; &nbsp; &nbsp; &nbsp;gcr.io/google_containers/k8s-dns-dnsmasq-amd64:1.12.1 &nbsp; &nbsp;&quot;/usr/sbin/dnsmasq --&quot; &nbsp; 3 minutes ago &nbsp; &nbsp; &nbsp; Up 3 minutes &nbsp; &nbsp; &nbsp; &nbsp;k8s_dnsmasq.3ad0a30e_kube-dns-3019842428-0x0v9_kube-system_119e9bc4-f41d-11e6-bd2a-00155d01bd15_e6192381<br />
+c97989d0c9b7 &nbsp; &nbsp; &nbsp; &nbsp;gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.12.1 &nbsp; &quot;/kube-dns --domain=c&quot; &nbsp; 4 minutes ago &nbsp; &nbsp; &nbsp; Up 4 minutes &nbsp; &nbsp; &nbsp; &nbsp;k8s_kubedns.95f1aa26_kube-dns-3019842428-0x0v9_kube-system_119e9bc4-f41d-11e6-bd2a-00155d01bd15_15e442e5<br />
+01c67511d71d &nbsp; &nbsp; &nbsp; &nbsp;gcr.io/google_containers/pause-amd64:3.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &quot;/pause&quot; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 9 minutes ago &nbsp; &nbsp; &nbsp; Up 9 minutes &nbsp; &nbsp; &nbsp; &nbsp;k8s_POD.8950c4fd_kube-dns-3019842428-0x0v9_kube-system_119e9bc4-f41d-11e6-bd2a-00155d01bd15_8c713105<br />
+<span style="font-size:18px">[root@kubemaster dns]# kubectl get deploy --all-namespaces</span><br />
+NAMESPACE &nbsp; &nbsp; NAME &nbsp; &nbsp; &nbsp; DESIRED &nbsp; CURRENT &nbsp; UP-TO-DATE &nbsp; AVAILABLE &nbsp; AGE<br />
+kube-system &nbsp; kube-dns &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 28m<br />
+<span style="font-size:18px">[root@kubemaster dns]# kubectl cluster-info</span><br />
+Kubernetes master is running at http://localhost:8080<br />
+<strong>KubeDNS is running at http://localhost:8080/api/v1/proxy/namespaces/kube-system/services/kube-dns</strong></p>
+
+<p>To further debug and diagnose cluster problems, use &#39;kubectl cluster-info dump&#39;.<br />
+<span style="font-size:18px">[root@kubemaster dns]# kubectl get services --namespace=kube-system</span><br />
+NAME &nbsp; &nbsp; &nbsp; CLUSTER-IP &nbsp; &nbsp;EXTERNAL-IP &nbsp; PORT(S) &nbsp; &nbsp; &nbsp; &nbsp; AGE<br />
+kube-dns &nbsp; 10.254.0.10 &nbsp; &lt;none&gt; &nbsp; &nbsp; &nbsp; &nbsp;53/UDP,53/TCP &nbsp; 9m<br />
+<span style="font-size:18px">[root@kubemaster dns]# kubectl get pods --namespace=kube-system</span><br />
+NAME &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;READY &nbsp; &nbsp; STATUS &nbsp; &nbsp;RESTARTS &nbsp; AGE<br />
+kube-dns-3019842428-0x0v9 &nbsp; 3/3 &nbsp; &nbsp; &nbsp; Running &nbsp; 0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;43m</p>
+
+<p><span style="font-size:18px">#kube-dns schedules a Pod and Service on the cluster, then configures the kubelets to tell individual containers to use the DNS Service&rsquo;s IP to resolve DNS names.<br />
+#The DNS pod is exposed as a Kubernetes Service with a static IP. Once assigned the kubelet passes DNS configured using the --cluster-dns=10.0.0.10 flag to each container.<br />
+#DNS names also need domains. The local domain is configurable, in the kubelet using the flag --cluster-domain=&lt;default local domain&gt;<br />
+[root@kubenode0 ~]# vi /etc/kubernetes/kubelet</span><br />
+# The address for the info server to serve on<br />
+KUBELET_ADDRESS=&quot;--address=0.0.0.0&quot;</p>
+
+<p># The port for the info server to serve on<br />
+KUBELET_PORT=&quot;--port=10250&quot;</p>
+
+<p># You may leave this blank to use the actual hostname<br />
+# Check the node number!<br />
+KUBELET_HOSTNAME=&quot;--hostname-override=kubenode0&quot;</p>
+
+<p># Location of the api-server<br />
+KUBELET_API_SERVER=&quot;--api-servers=http://kubemaster:8080&quot;</p>
+
+<p># Add your own!<br />
+<strong>KUBELET_ARGS=&quot;--cluster_dns=10.254.0.10 --cluster_domain=cluster.local&quot;</strong><br />
+<span style="font-size:18px">[root@kubenode0 ~]# systemctl restart kubelet &amp;&amp; systemctl status kubelet</span><br />
+°Ò kubelet.service - Kubernetes Kubelet Server<br />
+&nbsp; &nbsp;Loaded: loaded (/usr/lib/systemd/system/kubelet.service; enabled; vendor preset: disabled)<br />
+&nbsp; &nbsp;Active: active (running) since Thu 2017-02-16 17:29:41 CST; 44ms ago<br />
+&nbsp; &nbsp; &nbsp;Docs: https://github.com/GoogleCloudPlatform/kubernetes<br />
+&nbsp;Main PID: 12799 (kubelet)<br />
+&nbsp; &nbsp;Memory: 26.6M<br />
+&nbsp; &nbsp;CGroup: /system.slice/kubelet.service<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;©¿©§ 2410 journalctl -k -f<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;©∏©§12799 /usr/bin/kubelet --logtostderr=true --v=0 --api-servers=http://kubemaster:8080 --address=0.0.0.0 --port=10250 --hostname-override=kubenode0 --allow-privileged=false --cluster_dns=10.254.0.10 --cluster_domain=cluster.local...</p>
+
+<p>Feb 16 17:29:41 kubenode0 systemd[1]: Started Kubernetes Kubelet Server.<br />
+Feb 16 17:29:41 kubenode0 systemd[1]: Starting Kubernetes Kubelet Server...<br />
+<span style="font-size:18px">[root@kubemaster dns]# kubectl run nginx-first --image=greatbsky/nginx-https --replicas=2 --port=80</span><br />
+deployment &quot;nginx-first&quot; created<br />
+<span style="font-size:18px">[root@kubenode0 ~]# docker ps</span><br />
+CONTAINER ID &nbsp; &nbsp; &nbsp; &nbsp;IMAGE &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;COMMAND &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;CREATED &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;STATUS &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;NAMES<br />
+7f11df9a2b96 &nbsp; &nbsp; &nbsp; &nbsp;kubemaster:5000/nginx-https &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&quot;nginx -g &#39;daemon off&quot; &nbsp; About a minute ago &nbsp; Up About a minute &nbsp; k8s_nginx-first.841f396a_nginx-first-1279706673-zphw8_default_e3036dfa-f423-11e6-bd2a-00155d01bd15_90da1d26<br />
+da0db2779d2a &nbsp; &nbsp; &nbsp; &nbsp;gcr.io/google_containers/pause-amd64:3.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &quot;/pause&quot; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; About a minute ago &nbsp; Up About a minute &nbsp; k8s_POD.b2390301_nginx-first-1279706673-zphw8_default_e3036dfa-f423-11e6-bd2a-00155d01bd15_88254877<br />
+25716ebb42bc &nbsp; &nbsp; &nbsp; &nbsp;gcr.io/google_containers/k8s-dns-sidecar-amd64:1.12.1 &nbsp; &nbsp;&quot;/sidecar --v=2 --log&quot; &nbsp; 43 minutes ago &nbsp; &nbsp; &nbsp; Up 43 minutes &nbsp; &nbsp; &nbsp; k8s_sidecar.e51859d_kube-dns-3019842428-0x0v9_kube-system_119e9bc4-f41d-11e6-bd2a-00155d01bd15_012ede0f<br />
+005670d6e5f4 &nbsp; &nbsp; &nbsp; &nbsp;gcr.io/google_containers/k8s-dns-dnsmasq-amd64:1.12.1 &nbsp; &nbsp;&quot;/usr/sbin/dnsmasq --&quot; &nbsp; 43 minutes ago &nbsp; &nbsp; &nbsp; Up 43 minutes &nbsp; &nbsp; &nbsp; k8s_dnsmasq.3ad0a30e_kube-dns-3019842428-0x0v9_kube-system_119e9bc4-f41d-11e6-bd2a-00155d01bd15_e6192381<br />
+c97989d0c9b7 &nbsp; &nbsp; &nbsp; &nbsp;gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.12.1 &nbsp; &quot;/kube-dns --domain=c&quot; &nbsp; 44 minutes ago &nbsp; &nbsp; &nbsp; Up 44 minutes &nbsp; &nbsp; &nbsp; k8s_kubedns.95f1aa26_kube-dns-3019842428-0x0v9_kube-system_119e9bc4-f41d-11e6-bd2a-00155d01bd15_15e442e5<br />
+01c67511d71d &nbsp; &nbsp; &nbsp; &nbsp;gcr.io/google_containers/pause-amd64:3.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &quot;/pause&quot; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 49 minutes ago &nbsp; &nbsp; &nbsp; Up 49 minutes &nbsp; &nbsp; &nbsp; k8s_POD.8950c4fd_kube-dns-3019842428-0x0v9_kube-system_119e9bc4-f41d-11e6-bd2a-00155d01bd15_8c713105<br />
+<span style="font-size:18px">[root@kubenode1 ~]# docker ps</span><br />
+CONTAINER ID &nbsp; &nbsp; &nbsp; &nbsp;IMAGE &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;COMMAND &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;CREATED &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;STATUS &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;PORTS &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; NAMES<br />
+bcd44ec0cdba &nbsp; &nbsp; &nbsp; &nbsp;kubemaster:5000/nginx-https &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&quot;nginx -g &#39;daemon off&quot; &nbsp; 47 seconds ago &nbsp; &nbsp; &nbsp; Up 46 seconds &nbsp; &nbsp; &nbsp; k8s_nginx-first.841f396a_nginx-first-1279706673-304xc_default_e301d2a0-f423-11e6-bd2a-00155d01bd15_ffcd3be4<br />
+304f7aae58b9 &nbsp; &nbsp; &nbsp; &nbsp;gcr.io/google_containers/pause-amd64:3.0 &nbsp; &quot;/pause&quot; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; About a minute ago &nbsp; Up About a minute &nbsp; k8s_POD.b2390301_nginx-first-1279706673-304xc_default_e301d2a0-f423-11e6-bd2a-00155d01bd15_2f55df7b<br />
+<span style="font-size:18px">[root@kubemaster dns]# kubectl get deploy</span><br />
+NAME &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;DESIRED &nbsp; CURRENT &nbsp; UP-TO-DATE &nbsp; AVAILABLE &nbsp; AGE<br />
+nginx-first &nbsp; 2 &nbsp; &nbsp; &nbsp; &nbsp; 2 &nbsp; &nbsp; &nbsp; &nbsp; 2 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;2 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 2m<br />
+<span style="font-size:18px">[root@kubemaster dns]# kubectl expose deployment nginx-first --target-port=80</span><br />
+service &quot;nginx-first&quot; exposed<br />
+<span style="font-size:18px">[root@kubemaster dns]# kubectl get services</span><br />
+NAME &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;CLUSTER-IP &nbsp; &nbsp; &nbsp;EXTERNAL-IP &nbsp; PORT(S) &nbsp; AGE<br />
+kubernetes &nbsp; &nbsp;10.254.0.1 &nbsp; &nbsp; &nbsp;&lt;none&gt; &nbsp; &nbsp; &nbsp; &nbsp;443/TCP &nbsp; 2d<br />
+nginx-first &nbsp; 10.254.96.245 &nbsp; &lt;none&gt; &nbsp; &nbsp; &nbsp; &nbsp;80/TCP &nbsp; &nbsp;5s<br />
+<span style="font-size:18px">[root@kubemaster dns]# kubectl get pods</span><br />
+NAME &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; READY &nbsp; &nbsp; STATUS &nbsp; &nbsp;RESTARTS &nbsp; AGE<br />
+nginx-first-1279706673-304xc &nbsp; 1/1 &nbsp; &nbsp; &nbsp; Running &nbsp; 0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;3m<br />
+nginx-first-1279706673-zphw8 &nbsp; 1/1 &nbsp; &nbsp; &nbsp; Running &nbsp; 0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;3m<br />
+<span style="font-size:18px">[root@kubenode0 ~]# docker exec -it 7f11df9a2b96 /bin/bash</span><br />
+<span style="font-size:14px">[root@nginx-first-1279706673-zphw8 /]# yum install bind-utils -y<br />
+[root@nginx-first-1279706673-zphw8 /]# nslookup nginx-first</span><br />
+Server: &nbsp; &nbsp; &nbsp; &nbsp; 10.254.0.10<br />
+Address: &nbsp; &nbsp; &nbsp; &nbsp;10.254.0.10#53</p>
+
+<p>Name: &nbsp; nginx-first.default.svc.cluster.local<br />
+Address: 10.254.96.245<br />
+<span style="font-size:14px">[root@nginx-first-1279706673-nm91f /]# nslookup kubernetes.default</span><br />
+Server: &nbsp; &nbsp; &nbsp; &nbsp; 10.254.0.10<br />
+Address: &nbsp; &nbsp; &nbsp; &nbsp;10.254.0.10#53</p>
+
+<p>Non-authoritative answer:<br />
+Name: &nbsp; kubernetes.default.svc.cluster.local<br />
+Address: 10.254.0.1<br />
+<span style="font-size:14px">[root@nginx-first-1279706673-zphw8 /]# cat /etc/resolv.conf</span><br />
+<strong>search default.svc.cluster.local svc.cluster.local cluster.local<br />
+nameserver 10.254.0.10</strong><br />
+options ndots:5<br />
+<span style="font-size:14px">[root@nginx-first-1279706673-kp5kq /]# yum -y install openssh-clients<br />
+[root@nginx-first-1279706673-kp5kq /]# ssh 192.168.1.213</span><br />
+root@192.168.1.213&#39;s password:<br />
+^[[3~^[[3~Last login: Thu Feb 16 03:19:13 2017 from 192.168.1.88<br />
+[root@cloud2 ~]# exit<br />
+logout<br />
+Connection to 192.168.1.213 closed.<br />
+<span style="font-size:14px">[root@nginx-first-1279706673-kp5kq /]# ping 192.168.1.88</span><br />
+PING 192.168.1.88 (192.168.1.88) 56(84) bytes of data.<br />
+64 bytes from 192.168.1.88: icmp_seq=1 ttl=63 time=1.23 ms<br />
+^C<br />
+--- 192.168.1.88 ping statistics ---<br />
+1 packets transmitted, 1 received, 0% packet loss, time 0ms<br />
+rtt min/avg/max/mdev = 1.235/1.235/1.235/0.000 ms<br />
+<span style="font-size:18px">[root@kubemaster dns]# wget 172.30.63.3</span><br />
+--2017-02-16 17:38:57-- &nbsp;http://172.30.63.3/<br />
+Connecting to 172.30.63.3:80... connected.<br />
+HTTP request sent, awaiting response... 200 OK<br />
+Length: 612 [text/html]<br />
+Saving to: &lsquo;index.html&rsquo;</p>
+
+<p>100%[=====================================================================&gt;] 612 &nbsp; &nbsp; &nbsp; &nbsp; --.-K/s &nbsp; in 0.01s</p>
+
+<p>2017-02-16 17:38:57 (41.9 KB/s) - &lsquo;index.html&rsquo; saved [612/612]<br />
+&nbsp;</p>
+
+<p>&nbsp;</p>
+
+<p><span style="font-size:18px"><strong>Step 7 Deploy Addons dns-horizontal-autoscaling.</strong></span></p>
+
+<p><span style="font-size:18px">Autoscaling the DNS Service in a Cluster.</span></p>
+
+<p><span style="font-size:18px">[root@kubemaster dns]# cd ..<br />
+[root@kubemaster addons]# mkdir dns-horizontal-autoscaler<br />
+[root@kubemaster addons]# cd dns-horizontal-autoscaler/<br />
+[root@kubemaster dns-horizontal-autoscaler]# wget https://raw.githubusercontent.com/kubernetes/kubernetes/master/cluster/addons/dns-horizontal-autoscaler/dns-horizontal-autoscaler.yaml<br />
+[root@kubemaster dns-horizontal-autoscaler]# kubectl create -f dns-horizontal-autoscaler.yaml</span><br />
+deployment &quot;kube-dns-autoscaler&quot; created<br />
+<span style="font-size:18px">[root@kubemaster ~]# tail -f /var/log/messages</span><br />
+Feb 16 18:11:23 kubemaster kube-apiserver: W0216 18:11:23.303307 &nbsp; &nbsp;2559 listers.go:69] can not retrieve list of objects using index : Index with name namespace does not exist<br />
+Feb 16 18:11:23 kubemaster kube-controller-manager: I0216 18:11:23.305539 &nbsp; &nbsp;2570 event.go:217] Event(api.ObjectReference{Kind:&quot;Deployment&quot;, Namespace:&quot;kube-system&quot;, Name:&quot;kube-dns-autoscaler&quot;, UID:&quot;44e5391c-f430-11e6-bd2a-00155d01bd15&quot;, APIVersion:&quot;extensions&quot;, ResourceVersion:&quot;87034&quot;, FieldPath:&quot;&quot;}): type: &#39;Normal&#39; reason: &#39;ScalingReplicaSet&#39; Scaled up replica set kube-dns-autoscaler-2715466192 to 1<br />
+Feb 16 18:11:23 kubemaster kube-controller-manager: I0216 18:11:23.332477 &nbsp; &nbsp;2570 event.go:217] Event(api.ObjectReference{Kind:&quot;ReplicaSet&quot;, Namespace:&quot;kube-system&quot;, Name:&quot;kube-dns-autoscaler-2715466192&quot;, UID:&quot;44e6c822-f430-11e6-bd2a-00155d01bd15&quot;, APIVersion:&quot;extensions&quot;, ResourceVersion:&quot;87035&quot;, FieldPath:&quot;&quot;}): type: &#39;Normal&#39; reason: &#39;SuccessfulCreate&#39; Created pod: kube-dns-autoscaler-2715466192-vbb9t<br />
+Feb 16 18:11:23 kubemaster kube-scheduler: I0216 18:11:23.349409 &nbsp; &nbsp;2582 event.go:217] Event(api.ObjectReference{Kind:&quot;Pod&quot;, Namespace:&quot;kube-system&quot;, Name:&quot;kube-dns-autoscaler-2715466192-vbb9t&quot;, UID:&quot;44e95551-f430-11e6-bd2a-00155d01bd15&quot;, APIVersion:&quot;v1&quot;, ResourceVersion:&quot;87038&quot;, FieldPath:&quot;&quot;}): type: &#39;Normal&#39; reason: &#39;Scheduled&#39; Successfully assigned kube-dns-autoscaler-2715466192-vbb9t to kubenode1</p>
+
+<p><span style="font-size:18px">[root@kubenode1 ~]# tail -f /var/log/messages</span><br />
+Feb 16 18:18:55 kubenode1 dockerd-current: time=&quot;2017-02-16T18:18:55.635423200+08:00&quot; level=info msg=&quot;{Action=start, LoginUID=4294967295, PID=10518}&quot;<br />
+Feb 16 18:18:55 kubenode1 kernel: overlayfs: upper fs needs to support d_type. This is an invalid configuration.<br />
+Feb 16 18:18:55 kubenode1 systemd: Scope libcontainer-43545-systemd-test-default-dependencies.scope has no PIDs. Refusing.<br />
+Feb 16 18:18:55 kubenode1 systemd: Scope libcontainer-43545-systemd-test-default-dependencies.scope has no PIDs. Refusing.<br />
+Feb 16 18:18:55 kubenode1 systemd: Started docker container b5bbf2368df70f1ae59b1c3fe0a57f5e691de0cdb0a2d913d117053bf24e512f.<br />
+Feb 16 18:18:55 kubenode1 systemd: Starting docker container b5bbf2368df70f1ae59b1c3fe0a57f5e691de0cdb0a2d913d117053bf24e512f.<br />
+Feb 16 18:18:55 kubenode1 kernel: SELinux: mount invalid. &nbsp;Same superblock, different security settings for (dev mqueue, type mqueue)<br />
+Feb 16 18:18:55 kubenode1 systemd: Scope libcontainer-43563-systemd-test-default-dependencies.scope has no PIDs. Refusing.<br />
+Feb 16 18:18:55 kubenode1 systemd: Scope libcontainer-43563-systemd-test-default-dependencies.scope has no PIDs. Refusing.<br />
+Feb 16 18:18:55 kubenode1 journal: I0216 10:18:55.828489 &nbsp; &nbsp; &nbsp; 1 autoscaler.go:49] Scaling Namespace: kube-system, Target: deployment/kube-dns, Mode: linear<br />
+Feb 16 18:18:55 kubenode1 kubelet: E0216 18:18:55.842117 &nbsp; 10518 docker_manager.go:1770] Failed to create symbolic link to the log file of pod &quot;kube-dns-autoscaler-2715466192-vbb9t_kube-system(44e95551-f430-11e6-bd2a-00155d01bd15)&quot; container &quot;autoscaler&quot;: symlink &nbsp;/var/log/containers/kube-dns-autoscaler-2715466192-vbb9t_kube-system_autoscaler-b5bbf2368df70f1ae59b1c3fe0a57f5e691de0cdb0a2d913d117053bf24e512f.log: no such file or directory<br />
+Feb 16 18:18:55 kubenode1 dockerd-current: time=&quot;2017-02-16T18:18:55.848736300+08:00&quot; level=error msg=&quot;Handler for GET /containers/83f4b799fbf3f3299c1d9e8bbd69814c2f5a948af1127fb197dad2285ce3e736/json returned error: No such container: 83f4b799fbf3f3299c1d9e8bbd69814c2f5a948af1127fb197dad2285ce3e736&quot;<br />
+Feb 16 18:18:55 kubenode1 dockerd-current: time=&quot;2017-02-16T18:18:55.849158900+08:00&quot; level=error msg=&quot;Handler for GET /containers/83f4b799fbf3f3299c1d9e8bbd69814c2f5a948af1127fb197dad2285ce3e736/json returned error: No such container: 83f4b799fbf3f3299c1d9e8bbd69814c2f5a948af1127fb197dad2285ce3e736&quot;<br />
+Feb 16 18:18:55 kubenode1 journal: I0216 10:18:55.924126 &nbsp; &nbsp; &nbsp; 1 autoscaler_server.go:142] ConfigMap not found: configmaps &quot;kube-dns-autoscaler&quot; not found, will create one with default params<br />
+Feb 16 18:18:55 kubenode1 journal: I0216 10:18:55.989505 &nbsp; &nbsp; &nbsp; 1 k8sclient.go:120] Created ConfigMap kube-dns-autoscaler in namespace kube-system<br />
+Feb 16 18:18:55 kubenode1 journal: I0216 10:18:55.989551 &nbsp; &nbsp; &nbsp; 1 linear_controller.go:53] ConfigMap version change (old: &nbsp;new: 87614) - rebuilding params<br />
+Feb 16 18:18:55 kubenode1 journal: I0216 10:18:55.989564 &nbsp; &nbsp; &nbsp; 1 linear_controller.go:54] Params from apiserver:<br />
+Feb 16 18:18:55 kubenode1 journal: {&quot;coresPerReplica&quot;:256,&quot;min&quot;:1,&quot;nodesPerReplica&quot;:16}<br />
+Feb 16 18:18:56 kubenode1 kubelet: I0216 18:18:56.320899 &nbsp; 10518 operation_executor.go:917] MountVolume.SetUp succeeded for volume &quot;kubernetes.io/secret/44e95551-f430-11e6-bd2a-00155d01bd15-default-token-hqkj1&quot; (spec.Name: &quot;default-token-hqkj1&quot;) pod &quot;44e95551-f430-11e6-bd2a-00155d01bd15&quot; (UID: &quot;44e95551-f430-11e6-bd2a-00155d01bd15&quot;).</p>
+
+<p><span style="font-size:18px">[root@kubenode1 ~]# docker images</span><br />
+REPOSITORY &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; TAG &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; IMAGE ID &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;CREATED &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; SIZE<br />
+<strong>gcr.io/google_containers/cluster-proportional-autoscaler-amd64 &nbsp; 1.0.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; e183460c484d &nbsp; &nbsp; &nbsp; &nbsp;3 months ago &nbsp; &nbsp; &nbsp; &nbsp;48.16 MB</strong><br />
+kubemaster:5000/nginx-https &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;latest &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;4290b082ed77 &nbsp; &nbsp; &nbsp; &nbsp;3 months ago &nbsp; &nbsp; &nbsp; &nbsp;571.8 MB<br />
+gcr.io/google-containers/pause-amd64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 3.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 99e59f495ffa &nbsp; &nbsp; &nbsp; &nbsp;9 months ago &nbsp; &nbsp; &nbsp; &nbsp;746.9 kB<br />
+gcr.io/google_containers/pause-amd64 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 3.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 99e59f495ffa &nbsp; &nbsp; &nbsp; &nbsp;9 months ago &nbsp; &nbsp; &nbsp; &nbsp;746.9 kB</p>
+
+<p><span style="font-size:18px">[root@kubenode1 ~]# docker ps -a</span><br />
+CONTAINER ID &nbsp; &nbsp; &nbsp; &nbsp;IMAGE &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;COMMAND &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;CREATED &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; STATUS &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; NAMES<br />
+b5bbf2368df7 &nbsp; &nbsp; gcr.io/google_containers/cluster-proportional-autoscaler-amd64:1.0.0 &nbsp; &quot;/cluster-proportiona&quot; &nbsp; 3 minutes ago &nbsp; &nbsp; &nbsp; Up 3 minutes &nbsp; &nbsp; k8s_autoscaler.58a2f52f_kube-dns-autoscaler-2715466192-vbb9t_kube-system_44e95551-f430-11e6-bd2a-00155d01bd15_9d3b0622<br />
+72c73b97608d &nbsp; &nbsp; &nbsp; &nbsp;gcr.io/google_containers/pause-amd64:3.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &quot;/pause&quot; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 10 minutes ago &nbsp; &nbsp; &nbsp;Up 10 minutes &nbsp; &nbsp;k8s_POD.d8dbe16c_kube-dns-autoscaler-2715466192-vbb9t_kube-system_44e95551-f430-11e6-bd2a-00155d01bd15_30aa2820<br />
+9ade465a0d77 &nbsp; &nbsp; &nbsp; &nbsp;kubemaster:5000/nginx-https &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&quot;nginx -g &#39;daemon off&quot; &nbsp; 51 minutes ago &nbsp; &nbsp; &nbsp;Up 51 minutes &nbsp; &nbsp;k8s_nginx-first.841f396a_nginx-first-1279706673-nm91f_default_915b25f9-f42a-11e6-bd2a-00155d01bd15_7c4bfbaa<br />
+196bf8d8b4a8 &nbsp; &nbsp; &nbsp; &nbsp;gcr.io/google_containers/pause-amd64:3.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &quot;/pause&quot; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 51 minutes ago &nbsp; &nbsp; &nbsp;Up 51 minutes &nbsp; &nbsp;k8s_POD.b2390301_nginx-first-1279706673-nm91f_default_915b25f9-f42a-11e6-bd2a-00155d01bd15_b190f010</p>
+
+<p><span style="font-size:18px">[root@kubemaster dns-horizontal-autoscaler]# kubectl get configmap --namespace=kube-system</span><br />
+NAME &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;DATA &nbsp; &nbsp; &nbsp;AGE<br />
+kube-dns-autoscaler &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; 8m<br />
+<span style="font-size:18px">[root@kubemaster dns-horizontal-autoscaler]# kubectl get deployment --namespace=kube-system</span><br />
+NAME &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;DESIRED &nbsp; CURRENT &nbsp; UP-TO-DATE &nbsp; AVAILABLE &nbsp; AGE<br />
+kube-dns &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1 &nbsp; &nbsp; &nbsp; &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 2h<br />
+kube-dns-autoscaler &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 15m</p>
+
+<p>&nbsp;</p>
+
+<p><br />
+&nbsp;</p>
+
+<p><span style="font-size:18px"><strong>Step 8 Deploy Addons Web UI (Dashboard)</strong></span><span style="font-size:18px"><strong>.</strong></span></p>
+
+<p><span style="font-size:18px">Dashboard is a web-based Kubernetes user interface. You can use Dashboard to deploy containerized applications to a Kubernetes cluster, troubleshoot your containerized application, and manage the cluster itself along with its attendant resources. In my opinion, I prefer manage cluster with kubectl than dashboard. I think it&#39;s option.</span></p>
+
+<p><span style="font-size:18px">[root@kubemaster data]# cd k8s/addons/<br />
+[root@kubemaster addons]# kubectl get pods --all-namespaces | grep dashboard<br />
+[root@kubemaster addons]# mkdir dashboard<br />
+[root@kubemaster addons]# cd dashboard/<br />
+[root@kubemaster dashboard]# wget https://rawgit.com/kubernetes/dashboard/master/src/deploy/kubernetes-dashboard.yaml<br />
+[root@kubemaster dashboard]# vi kubernetes-dashboard.yaml</span><br />
+&nbsp; &nbsp; spec:<br />
+&nbsp; &nbsp; &nbsp; containers:<br />
+&nbsp; &nbsp; &nbsp; - name: kubernetes-dashboard<br />
+&nbsp; &nbsp; &nbsp; &nbsp; image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.5.1<br />
+&nbsp; &nbsp; &nbsp; &nbsp; <strong>imagePullPolicy: IfNotPresent</strong><br />
+&nbsp; &nbsp; &nbsp; &nbsp; ports:<br />
+&nbsp; &nbsp; &nbsp; &nbsp; - containerPort: 9090<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; protocol: TCP<br />
+<span style="font-size:18px">[root@kubemaster dashboard]# kubectl create -f kubernetes-dashboard.yaml</span><br />
+deployment &quot;kubernetes-dashboard&quot; created<br />
+service &quot;kubernetes-dashboard&quot; created<br />
+<span style="font-size:18px">[root@kubemaster addons]# tail -f /var/log/messages</span><br />
+Feb 17 12:13:57 kubemaster etcd: start to snapshot (applied: 260026, lastsnap: 250025)<br />
+Feb 17 12:13:57 kubemaster etcd: saved snapshot at index 260026<br />
+Feb 17 12:13:57 kubemaster etcd: compacted raft log at 255026<br />
+Feb 17 12:13:58 kubemaster etcd: segmented wal file /var/lib/etcd/default.etcd/member/wal/0000000000000003-000000000003f7be.wal is created<br />
+Feb 17 12:14:17 kubemaster etcd: purged file /var/lib/etcd/default.etcd/member/snap/000000000000000d-0000000000033465.snap successfully<br />
+Feb 17 12:17:40 kubemaster kube-controller-manager: W0217 12:17:40.050318 &nbsp; &nbsp; 641 reflector.go:319] pkg/controller/garbagecollector/garbagecollector.go:768: watch of &lt;nil&gt; ended with: 401: The event in requested index is outdated and cleared (the requested history has been cleared [96335/96182]) [97334]<br />
+Feb 17 12:27:54 kubemaster kube-apiserver: W0217 12:27:54.454921 &nbsp; &nbsp;2125 listers.go:69] can not retrieve list of objects using index : Index with name namespace does not exist<br />
+Feb 17 12:27:54 kubemaster kube-controller-manager: I0217 12:27:54.458476 &nbsp; &nbsp; 641 event.go:217] Event(api.ObjectReference{Kind:&quot;Deployment&quot;, Namespace:&quot;kube-system&quot;, Name:&quot;kubernetes-dashboard&quot;, UID:&quot;73785324-f4c9-11e6-b9c4-00155d01bd15&quot;, APIVersion:&quot;extensions&quot;, ResourceVersion:&quot;98069&quot;, FieldPath:&quot;&quot;}): type: &#39;Normal&#39; reason: &#39;ScalingReplicaSet&#39; Scaled up replica set kubernetes-dashboard-3203831700 to 1<br />
+Feb 17 12:27:54 kubemaster kube-controller-manager: I0217 12:27:54.494379 &nbsp; &nbsp; 641 event.go:217] Event(api.ObjectReference{Kind:&quot;ReplicaSet&quot;, Namespace:&quot;kube-system&quot;, Name:&quot;kubernetes-dashboard-3203831700&quot;, UID:&quot;737a677d-f4c9-11e6-b9c4-00155d01bd15&quot;, APIVersion:&quot;extensions&quot;, ResourceVersion:&quot;98070&quot;, FieldPath:&quot;&quot;}): type: &#39;Normal&#39; reason: &#39;SuccessfulCreate&#39; Created pod: kubernetes-dashboard-3203831700-zrhpz<br />
+Feb 17 12:27:54 kubemaster kube-scheduler: I0217 12:27:54.556431 &nbsp; &nbsp; 651 event.go:217] Event(api.ObjectReference{Kind:&quot;Pod&quot;, Namespace:&quot;kube-system&quot;, Name:&quot;kubernetes-dashboard-3203831700-zrhpz&quot;, UID:&quot;737f957b-f4c9-11e6-b9c4-00155d01bd15&quot;, APIVersion:&quot;v1&quot;, ResourceVersion:&quot;98072&quot;, FieldPath:&quot;&quot;}): type: &#39;Normal&#39; reason: &#39;Scheduled&#39; <strong>Successfully assigned kubernetes-dashboard-3203831700-zrhpz to kubenode1</strong><br />
+<span style="font-size:18px">[root@kubemaster addons]# kubectl get deploy --namespace=kube-system</span><br />
+NAME &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; DESIRED &nbsp; CURRENT &nbsp; UP-TO-DATE &nbsp; AVAILABLE &nbsp; AGE<br />
+kube-dns &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 20h<br />
+kube-dns-autoscaler &nbsp; &nbsp;1 &nbsp; &nbsp; &nbsp; &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 18h<br />
+<strong>kubernetes-dashboard &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 4m</strong><br />
+<span style="font-size:18px">[root@kubemaster addons]# kubectl get service --namespace=kube-system</span><br />
+NAME &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; CLUSTER-IP &nbsp; &nbsp; EXTERNAL-IP &nbsp; PORT(S) &nbsp; &nbsp; &nbsp; &nbsp; AGE<br />
+kube-dns &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 10.254.0.10 &nbsp; &nbsp;&lt;none&gt; &nbsp; &nbsp; &nbsp; &nbsp;53/UDP,53/TCP &nbsp; 20h<br />
+kubernetes-dashboard &nbsp; 10.254.93.73 &nbsp; &lt;nodes&gt; &nbsp; &nbsp; &nbsp; 80:31958/TCP &nbsp; &nbsp;4m<br />
+<span style="font-size:18px">[root@kubemaster addons]# kubectl get pod --namespace=kube-system</span><br />
+NAME &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;READY &nbsp; &nbsp; STATUS &nbsp; &nbsp;RESTARTS &nbsp; AGE<br />
+kube-dns-3019842428-0x0v9 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 3/3 &nbsp; &nbsp; &nbsp; Running &nbsp; 3 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;20h<br />
+kube-dns-autoscaler-2715466192-5pc5x &nbsp; &nbsp;1/1 &nbsp; &nbsp; &nbsp; Running &nbsp; 1 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;18h<br />
+kubernetes-dashboard-3203831700-zrhpz &nbsp; 1/1 &nbsp; &nbsp; &nbsp; Running &nbsp; 0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;4m<br />
+<span style="font-size:18px">[root@kubemaster addons]# kubectl cluster-info</span><br />
+Kubernetes master is running at http://localhost:8080<br />
+KubeDNS is running at http://localhost:8080/api/v1/proxy/namespaces/kube-system/services/kube-dns<br />
+there&#39;s no kubernetes dashboard? I don&#39;t know why...anyone knows please tell me<br />
+To further debug and diagnose cluster problems, use &#39;kubectl cluster-info dump&#39;.<br />
+<span style="font-size:18px">[root@kubenode1 ~]# docker ps</span><br />
+CONTAINER ID &nbsp; &nbsp; &nbsp; &nbsp;IMAGE &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;COMMAND &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;CREATED &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; STATUS &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; NAMES<br />
+<strong>140bbe834011 &nbsp; &nbsp; gcr.io/google_containers/kubernetes-dashboard-amd64:v1.5.1</strong> &nbsp; &quot;/dashboard --port=90&quot; &nbsp; 8 minutes ago &nbsp; Up 8 minutes &nbsp;k8s_kubernetes-dashboard.70f5d850_kubernetes-dashboard-3203831700-zrhpz_kube-system_737f957b-f4c9-11e6-b9c4-00155d01bd15_e914143d<br />
+648d36ecb41a &nbsp; &nbsp; gcr.io/google_containers/pause-amd64:3.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &quot;/pause&quot; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 9 minutes ago &nbsp; Up 9 minutes &nbsp;k8s_POD.2225036b_kubernetes-dashboard-3203831700-zrhpz_kube-system_737f957b-f4c9-11e6-b9c4-00155d01bd15_a67454f9<br />
+833074293dd4 &nbsp; &nbsp; &nbsp; &nbsp;kubemaster:5000/nginx-https &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&quot;nginx -g &#39;daemon off&quot; &nbsp; About an hour ago &nbsp; Up About an hour &nbsp; k8s_nginx-first.841f396a_nginx-first-1279706673-nm91f_default_915b25f9-f42a-11e6-bd2a-00155d01bd15_208c673e<br />
+53de5a7520dc &nbsp; &nbsp; &nbsp; &nbsp;gcr.io/google_containers/cluster-proportional-autoscaler-amd64:1.0.0 &nbsp; &quot;/cluster-proportiona&quot; &nbsp; About an hour ago &nbsp; Up About an hour &nbsp; k8s_autoscaler.58a2f52f_kube-dns-autoscaler-2715466192-5pc5x_kube-system_ff490043-f432-11e6-bd2a-00155d01bd15_2429c170<br />
+b2e7ad10aa37 &nbsp; &nbsp; &nbsp; &nbsp;gcr.io/google_containers/pause-amd64:3.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &quot;/pause&quot; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; About an hour ago &nbsp; Up About an hour &nbsp; k8s_POD.d8dbe16c_kube-dns-autoscaler-2715466192-5pc5x_kube-system_ff490043-f432-11e6-bd2a-00155d01bd15_3e630c7c<br />
+c478f1e3f19b &nbsp; &nbsp; &nbsp; &nbsp;gcr.io/google_containers/pause-amd64:3.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &quot;/pause&quot; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; About an hour ago &nbsp; Up About an hour &nbsp; k8s_POD.b2390301_nginx-first-1279706673-nm91f_default_915b25f9-f42a-11e6-bd2a-00155d01bd15_9dfda496<br />
+<span style="font-size:18px">[root@kubenode1 ~]# docker logs 140bbe834011</span><br />
+Using HTTP port: 9090<br />
+Creating API server client for https://10.254.0.1:443<br />
+Successful initial request to the apiserver, version: v1.5.2<br />
+Creating in-cluster Heapster client<br />
+Using service account token for csrf signing<br />
+<span style="font-size:18px">[root@kubemaster addons]# kubectl edit svc/kubernetes-dashboard --namespace=kube-system</span><br />
+# Please edit the object below. Lines beginning with a &#39;#&#39; will be ignored,<br />
+# and an empty file will abort the edit. If an error occurs while saving this file will be<br />
+# reopened with the relevant failures.<br />
+#<br />
+apiVersion: v1<br />
+kind: Service<br />
+metadata:<br />
+&nbsp; creationTimestamp: 2017-02-17T04:27:54Z<br />
+&nbsp; labels:<br />
+&nbsp; &nbsp; app: kubernetes-dashboard<br />
+&nbsp; name: kubernetes-dashboard<br />
+&nbsp; namespace: kube-system<br />
+&nbsp; resourceVersion: &quot;98084&quot;<br />
+&nbsp; selfLink: /api/v1/namespaces/kube-system/services/kubernetes-dashboard<br />
+&nbsp; uid: 7391ffe7-f4c9-11e6-b9c4-00155d01bd15<br />
+spec:<br />
+&nbsp; clusterIP: 10.254.93.73<br />
+&nbsp; ports:<br />
+&nbsp; - <strong>nodePort: 31958</strong><br />
+&nbsp; &nbsp; port: 80<br />
+&nbsp; &nbsp; protocol: TCP<br />
+&nbsp; &nbsp; targetPort: 9090<br />
+&nbsp; selector:<br />
+&nbsp; &nbsp; app: kubernetes-dashboard<br />
+&nbsp; sessionAffinity: None<br />
+&nbsp; type: NodePort<br />
+status:<br />
+&nbsp; loadBalancer: {}<br />
+<span style="font-size:18px">[root@kubemaster addons]# kubectl describe nodes kubenode1</span><br />
+Name: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; kubenode1<br />
+Role:<br />
+Labels: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; beta.kubernetes.io/arch=amd64<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; beta.kubernetes.io/os=linux<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; kubernetes.io/hostname=kubenode1<br />
+Taints: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &lt;none&gt;<br />
+CreationTimestamp: &nbsp; &nbsp; &nbsp;Tue, 14 Feb 2017 15:10:44 +0800<br />
+Phase:<br />
+Conditions:<br />
+&nbsp; Type &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;Status &nbsp;LastHeartbeatTime &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; LastTransitionTime &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;Reason &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;Message<br />
+&nbsp; ---- &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------ &nbsp;----------------- &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; ------------------ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;------ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;-------<br />
+&nbsp; OutOfDisk &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; False &nbsp; Fri, 17 Feb 2017 13:12:51 +0800 &nbsp; &nbsp; &nbsp; &nbsp; Tue, 14 Feb 2017 15:10:44 +0800 &nbsp; &nbsp; &nbsp; &nbsp; KubeletHasSufficientDisk &nbsp; &nbsp; &nbsp; &nbsp;kubelet has sufficient disk space available<br />
+&nbsp; MemoryPressure &nbsp; &nbsp; &nbsp; &nbsp;False &nbsp; Fri, 17 Feb 2017 13:12:51 +0800 &nbsp; &nbsp; &nbsp; &nbsp; Tue, 14 Feb 2017 15:10:44 +0800 &nbsp; &nbsp; &nbsp; &nbsp; KubeletHasSufficientMemory &nbsp; &nbsp; &nbsp;kubelet has sufficient memory available<br />
+&nbsp; DiskPressure &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;False &nbsp; Fri, 17 Feb 2017 13:12:51 +0800 &nbsp; &nbsp; &nbsp; &nbsp; Tue, 14 Feb 2017 15:10:44 +0800 &nbsp; &nbsp; &nbsp; &nbsp; KubeletHasNoDiskPressure &nbsp; &nbsp; &nbsp; &nbsp;kubelet has no disk pressure<br />
+&nbsp; Ready &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; True &nbsp; &nbsp;Fri, 17 Feb 2017 13:12:51 +0800 &nbsp; &nbsp; &nbsp; &nbsp; Tue, 14 Feb 2017 15:10:44 +0800 &nbsp; &nbsp; &nbsp; &nbsp; KubeletReady &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;kubelet is posting ready status<br />
+<strong><span style="font-size:14px">Addresses: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;192.168.1.173,192.168.1.173,kubenode1</span></strong><br />
+Capacity:<br />
+&nbsp;alpha.kubernetes.io/nvidia-gpu: &nbsp; &nbsp; &nbsp; &nbsp;0<br />
+&nbsp;cpu: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 1<br />
+&nbsp;memory: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;3850324Ki<br />
+&nbsp;pods: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;110<br />
+&nbsp;</p>
+
+<p><span style="font-size:18px">Currently, you can visit the page http://192.168.1.173:31958 on windows with the kubenode1 address and nodeport.</span></p>
+
+<p>&nbsp;</p>
+
+<p><span style="font-size:18px">Now I have finished the installation of kubernetes v1.5.2, if you need more addons you can visit&nbsp;https://kubernetes.io/docs/admin/addons/</span></p>
+
+<p><span style="font-size:18px">Enjoy yourself, Good luck...</span></p>
