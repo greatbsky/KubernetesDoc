@@ -9,4 +9,4 @@ This is my installation note of kubernetes V1.5.2, post here, may help someone t
 
 English: https://greatbsky.github.io/KubernetesDoc/kubernetes1.5.2/en.html
 
-ÖÐÎÄ£ºhttps://greatbsky.github.io/KubernetesDoc/kubernetes1.5.2/cn.html
+ä¸­æ–‡ï¼šhttps://greatbsky.github.io/KubernetesDoc/kubernetes1.5.2/cn.html
