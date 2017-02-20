@@ -246,7 +246,7 @@ WantedBy=multi-user.target<br />
 <span style="font-size:18px">[root@all ~]# vi /etc/sysconfig/docker</span><br />
 # /etc/sysconfig/docker<br />
 # Modify these options if you want to change the way the docker daemon runs<br />
-<strong>OPTIONS=&#39;--selinux-enabled --log-driver=journald --graph=/data/env/docker --insecure-registry kubemaster:5000 --signature-enabled=false&#39;</strong><br />
+<strong>OPTIONS=&#39;--selinux-enabled --log-driver=journald --graph=/data/env/docker --insecure-registry kubemaster:5000&#39;</strong><br />
 <span style="font-size:18px">[root@all ~]# systemctl enable docker &amp;&amp; systemctl restart docker<br />
 [root@all ~]# systemctl status docker</span></p>
 
