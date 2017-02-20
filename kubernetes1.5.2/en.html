@@ -248,7 +248,7 @@ WantedBy=multi-user.target<br />
 <span style="font-size:18px">[root@all ~]# vi /etc/sysconfig/docker</span><br />
 # /etc/sysconfig/docker<br />
 # Modify these options if you want to change the way the docker daemon runs<br />
-<strong>OPTIONS=&#39;--selinux-enabled --log-driver=journald --graph=/data/env/docker --insecure-registry kubemaster:5000 --signature-enabled=false&#39;</strong><br />
+<strong>OPTIONS=&#39;--selinux-enabled --log-driver=journald --graph=/data/env/docker --insecure-registry kubemaster:5000&#39;</strong><br />
 <span style="font-size:18px">[root@all ~]# systemctl enable docker &amp;&amp; systemctl restart docker<br />
 [root@all ~]# systemctl status docker</span></p>
 
@@ -728,7 +728,7 @@ Feb 16 16:39:22 kubenode0 journal: I0216 08:39:22.271743 &nbsp; &nbsp; &nbsp; 1 
 Feb 16 16:39:32 kubenode0 journal: E0216 08:39:32.268986 &nbsp; &nbsp; &nbsp; 1 sync_dir.go:68] Error loading config from /kube-dns-config: lstat /kube-dns-config: no such file or directory<br />
 Feb 16 16:39:38 kubenode0 kubelet: I0216 16:39:38.034635 &nbsp; &nbsp;2365 operation_executor.go:917] MountVolume.SetUp succeeded for volume &quot;kubernetes.io/secret/119e9bc4-f41d-11e6-bd2a-00155d01bd15-default-token-hqkj1&quot; (spec.Name: &quot;default-token-hqkj1&quot;) pod &quot;119e9bc4-f41d-11e6-bd2a-00155d01bd15&quot; (UID: &quot;119e9bc4-f41d-11e6-bd2a-00155d01bd15&quot;).<br />
 Feb 16 16:39:42 kubenode0 journal: E0216 08:39:42.268349 &nbsp; &nbsp; &nbsp; 1 sync_dir.go:68] Error loading config from /kube-dns-config: lstat /kube-dns-config: no such file or directory<br />
-Feb 16 16:38:42 kubenode0 journal: E0216 08:38:42.268428 &nbsp; &nbsp; &nbsp; 1 sync_dir.go:68] Error loading config from /kube-dns-config: lstat /kube-dns-config: no such file or directory&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;#“≈¡ÙŒ Ã‚£¨Œ¥Ω‚<br />
+Feb 16 16:38:42 kubenode0 journal: E0216 08:38:42.268428 &nbsp; &nbsp; &nbsp; 1 sync_dir.go:68] Error loading config from /kube-dns-config: lstat /kube-dns-config: no such file or directory&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;#ÈÅóÁïôÈóÆÈ¢òÔºåÊú™Ëß£<br />
 Feb 16 16:38:52 kubenode0 journal: E0216 08:38:52.268351 &nbsp; &nbsp; &nbsp; 1 sync_dir.go:68] Error loading config from /kube-dns-config: lstat /kube-dns-config: no such file or directory<br />
 Feb 16 16:39:02 kubenode0 journal: E0216 08:39:02.268340 &nbsp; &nbsp; &nbsp; 1 sync_dir.go:68] Error loading config from /kube-dns-config: lstat /kube-dns-config: no such file or directory<br />
 <span style="font-size:18px">[root@kubenode0 ~]# docker images &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;#you should see the images from&nbsp;gcr.io, if not, you may docker pull them by yourself.</span><br />
@@ -780,15 +780,15 @@ KUBELET_API_SERVER=&quot;--api-servers=http://kubemaster:8080&quot;</p>
 <p># Add your own!<br />
 <strong>KUBELET_ARGS=&quot;--cluster_dns=10.254.0.10 --cluster_domain=cluster.local&quot;</strong><br />
 <span style="font-size:18px">[root@kubenode0 ~]# systemctl restart kubelet &amp;&amp; systemctl status kubelet</span><br />
-°Ò kubelet.service - Kubernetes Kubelet Server<br />
+‚óè kubelet.service - Kubernetes Kubelet Server<br />
 &nbsp; &nbsp;Loaded: loaded (/usr/lib/systemd/system/kubelet.service; enabled; vendor preset: disabled)<br />
 &nbsp; &nbsp;Active: active (running) since Thu 2017-02-16 17:29:41 CST; 44ms ago<br />
 &nbsp; &nbsp; &nbsp;Docs: https://github.com/GoogleCloudPlatform/kubernetes<br />
 &nbsp;Main PID: 12799 (kubelet)<br />
 &nbsp; &nbsp;Memory: 26.6M<br />
 &nbsp; &nbsp;CGroup: /system.slice/kubelet.service<br />
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;©¿©§ 2410 journalctl -k -f<br />
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;©∏©§12799 /usr/bin/kubelet --logtostderr=true --v=0 --api-servers=http://kubemaster:8080 --address=0.0.0.0 --port=10250 --hostname-override=kubenode0 --allow-privileged=false --cluster_dns=10.254.0.10 --cluster_domain=cluster.local...</p>
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;‚îú‚îÄ 2410 journalctl -k -f<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;‚îî‚îÄ12799 /usr/bin/kubelet --logtostderr=true --v=0 --api-servers=http://kubemaster:8080 --address=0.0.0.0 --port=10250 --hostname-override=kubenode0 --allow-privileged=false --cluster_dns=10.254.0.10 --cluster_domain=cluster.local...</p>
 
 <p>Feb 16 17:29:41 kubenode0 systemd[1]: Started Kubernetes Kubelet Server.<br />
 Feb 16 17:29:41 kubenode0 systemd[1]: Starting Kubernetes Kubelet Server...<br />
