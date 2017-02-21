@@ -713,6 +713,7 @@ spec:<br />
 
 <p><span style="font-size:18px">[root@kubemaster dns]# vi /etc/kubernetes/controller-manager&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;#otherwise you will see the error: No API token found for service account &quot;default&quot;</span><br />
 KUBE_CONTROLLER_MANAGER_ARGS=&quot;--service-account-private-key-file=/var/run/kubernetes/apiserver.key --root-ca-file=/var/run/kubernetes/apiserver.crt&quot;<br />
+<span style="font-size:18px">[root@kubemaster dns]# systemctl restart kube-controller-manager &amp;&amp; systemctl status kube-controller-manager</span><br />
 <span style="font-size:18px">[root@kubemaster dns]# kubectl create -f kubedns-controller.yaml.sed</span><br />
 deployment &quot;kube-dns&quot; created<br />
 <span style="font-size:18px">[root@kubemaster dns]# kubectl create -f kubedns-svc.yaml.sed</span><br />
