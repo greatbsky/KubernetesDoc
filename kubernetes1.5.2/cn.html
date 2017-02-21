@@ -711,6 +711,7 @@ spec:<br />
 
 <p><span style="font-size:18px">[root@kubemaster dns]# vi /etc/kubernetes/controller-manager&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;#若忘记修改可能会报错：No API token found for service account &quot;default&quot;</span><br />
 KUBE_CONTROLLER_MANAGER_ARGS=&quot;--service-account-private-key-file=/var/run/kubernetes/apiserver.key --root-ca-file=/var/run/kubernetes/apiserver.crt&quot;<br />
+<span style="font-size:18px">[root@kubemaster dns]# systemctl restart kube-controller-manager &amp;&amp; systemctl status kube-controller-manager</span><br />
 <span style="font-size:18px">[root@kubemaster dns]# kubectl create -f kubedns-controller.yaml.sed</span><br />
 deployment &quot;kube-dns&quot; created<br />
 <span style="font-size:18px">[root@kubemaster dns]# kubectl create -f kubedns-svc.yaml.sed</span><br />
@@ -790,7 +791,7 @@ KUBELET_API_SERVER=&quot;--api-servers=http://kubemaster:8080&quot;</p>
 
 <p>Feb 16 17:29:41 kubenode0 systemd[1]: Started Kubernetes Kubelet Server.<br />
 Feb 16 17:29:41 kubenode0 systemd[1]: Starting Kubernetes Kubelet Server...<br />
-<span style="font-size:18px">[root@kubemaster dns]# kubectl run nginx-first --image=greatbsky/nginx-https --replicas=2 --port=80</span><br />
+<span style="font-size:18px">[root@kubemaster dns]# kubectl run nginx-first --image=greatbsky/nginx --replicas=2 --port=80</span><br />
 deployment &quot;nginx-first&quot; created<br />
 <span style="font-size:18px">[root@kubenode0 ~]# docker ps</span><br />
 CONTAINER ID &nbsp; &nbsp; &nbsp; &nbsp;IMAGE &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;COMMAND &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;CREATED &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;STATUS &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;NAMES<br />
